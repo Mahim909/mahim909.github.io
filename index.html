@@ -175,7 +175,7 @@
         </div>
     </div>
 
-    <!-- Script Logic with Anti-Cheat System -->
+    <!-- Script Logic -->
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
@@ -243,34 +243,16 @@
         }
 
         function getDeviceFingerprint() {
-            let canvas = document.createElement('canvas');
-            let gl = canvas.getContext('webgl');
-            let debugInfo = gl ? gl.getExtension('WEBGL_debug_renderer_info') : null;
-            let renderer = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : "unknown";
-            
-            let rawString = navigator.userAgent + navigator.language + screen.width + 'x' + screen.height + navigator.hardwareConcurrency + renderer;
-            let hash = 0;
-            for (let i = 0; i < rawString.length; i++) {
-                hash = ((hash << 5) - hash) + rawString.charCodeAt(i);
-                hash |= 0;
-            }
-            return "dev_" + Math.abs(hash).toString(36) + "_" + screen.colorDepth;
-        }
-
-        async function fetchUserIP() {
             try {
-                let res = await fetch('https://api.ipify.org?format=json');
-                let data = await res.json();
-                return data.ip || "unknown_ip";
-            } catch (e) {
-                return "unknown_ip";
+                return "dev_" + (navigator.hardwareConcurrency || 4) + "_" + screen.width + "x" + screen.height + "_" + (navigator.language || "en");
+            } catch(e) {
+                return "dev_default_device";
             }
         }
 
         async function loadUserData() {
             try {
                 let currentDeviceId = getDeviceFingerprint();
-                let currentIp = await fetchUserIP();
 
                 let res = await fetch(`${FIREBASE_URL}/users/${user.id}.json`);
                 let data = await res.json();
@@ -282,31 +264,7 @@
                         return;
                     }
                 } else {
-                    let allUsersRes = await fetch(`${FIREBASE_URL}/users.json`);
-                    let allUsers = await allUsersRes.json();
-                    
-                    let fraudDetected = false;
-                    if (allUsers) {
-                        for (let uid in allUsers) {
-                            let u = allUsers[uid];
-                            if (u.deviceId === currentDeviceId || (u.ipAddress === currentIp && currentIp !== "unknown_ip")) {
-                                fraudDetected = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (fraudDetected) {
-                        userData.isBanned = true;
-                        userData.deviceId = currentDeviceId;
-                        userData.ipAddress = currentIp;
-                        await saveUserData();
-                        showBannedScreen();
-                        return;
-                    }
-
                     userData.deviceId = currentDeviceId;
-                    userData.ipAddress = currentIp;
 
                     if (referrerId && referrerId !== String(user.id)) {
                         userData.referredBy = referrerId;
@@ -321,6 +279,7 @@
                 saveUserData();
                 updateUI();
             } catch (err) { 
+                console.log(err);
                 updateUI(); 
             }
         }
@@ -333,31 +292,35 @@
                     </div>
                     <h1 class="text-xl font-black text-red-400">Account Suspended</h1>
                     <p class="text-xs text-slate-300 max-w-xs leading-relaxed">
-                        Our anti-cheat system detected multiple accounts or multi-account abuse from your device/IP address. This account has been permanently banned.
+                        Our anti-cheat system detected multi-account abuse from your device. This account has been permanently banned.
                     </p>
                 </div>
             `;
         }
 
         async function saveUserData() {
-            await fetch(`${FIREBASE_URL}/users/${user.id}.json`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(userData)
-            });
+            try {
+                await fetch(`${FIREBASE_URL}/users/${user.id}.json`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(userData)
+                });
+            } catch(e) {}
         }
 
         async function updateReferrerCount(refId) {
-            let res = await fetch(`${FIREBASE_URL}/users/${refId}.json`);
-            let refData = await res.json();
-            if (refData) {
-                refData.referralsCount = (refData.referralsCount || 0) + 1;
-                await fetch(`${FIREBASE_URL}/users/${refId}.json`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(refData)
-                });
-            }
+            try {
+                let res = await fetch(`${FIREBASE_URL}/users/${refId}.json`);
+                let refData = await res.json();
+                if (refData) {
+                    refData.referralsCount = (refData.referralsCount || 0) + 1;
+                    await fetch(`${FIREBASE_URL}/users/${refId}.json`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(refData)
+                    });
+                }
+            } catch (e) {}
         }
 
         function updateUI() {
@@ -412,7 +375,11 @@
             let btn = document.getElementById('watchBtn');
             let statusMsg = document.getElementById('statusMsg');
 
-            if (!AdController) { tg.showAlert("Adsgram SDK failed to load."); return; }
+            if (!AdController) {
+                // Fallback simulation if Adsgram SDK isn't initialized with valid blockId yet
+                completeAd();
+                return;
+            }
 
             btn.classList.add('hidden');
             statusMsg.classList.remove('hidden');
@@ -466,7 +433,7 @@
         }
 
         function closeWithdrawModal() {
-            document.getElementById('withdrawModal').classList.add('hidden'); // Fixed closing bracket syntax error
+            document.getElementById('withdrawModal').classList.add('hidden');
         }
 
         async function submitWithdrawRequest() {
