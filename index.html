@@ -16,7 +16,6 @@
   <script src="//libtl.com/sdk.js" data-zone="12267942" data-sdk="show_12267942"></script>
 
   <style>
-    /* ✅ ORIGINAL 3D PREMIUM DESIGN */
     :root{--primary:#6C5CE7;--secondary:#A29BFE;--bg:#F0F3F8;--surface:#FFF;--text:#2D3436;--danger:#ff4757;--success:#00b894;}
     *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
     body{background:var(--bg);color:var(--text);padding-bottom:90px;-webkit-tap-highlight-color:transparent;}
@@ -122,7 +121,6 @@
        ========================================= */
     .leaderboard-title { text-align:center; font-weight:900; font-size:1.3rem; color:var(--text); margin-top:20px; z-index: 20; position: relative; }
     
-    /* Increased margin to 110px so the crowns do not overlap the title */
     .podium-container { display: flex; justify-content: center; align-items: flex-end; gap: 8px; margin: 110px 10px 30px; }
     
     .podium-item { text-align: center; display: flex; flex-direction: column; align-items: center; position: relative; background: #fff; padding: 15px 8px 10px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.06); width: 31%; }
@@ -135,17 +133,14 @@
     .badge-bal { background: rgba(108,92,231,0.1); color: var(--primary); border: 1px dashed rgba(108,92,231,0.3); }
     .badge-ref { background: rgba(0,184,148,0.1); color: #00b894; border: 1px dashed rgba(0,184,148,0.3); }
     
-    /* Rank 1 (Gold) */
     .rank-1 { z-index: 10; margin: 0 5px; transform: translateY(-20px); width: 35%; border: 2px solid rgba(255,215,0,0.4); background: linear-gradient(180deg, #fff, #fffdf0); }
     .rank-1 .podium-img { width: 70px; height: 70px; border-color: #ffd700; top: -40px; box-shadow: 0 0 20px rgba(255,215,0,0.5); } 
     .rank-1 .crown { color: #ffd700; font-size: 2.5rem; top: -75px; }
     
-    /* Rank 2 (Silver) */
     .rank-2 { border: 2px solid rgba(192,192,192,0.4); background: linear-gradient(180deg, #fff, #f8f9fa); }
     .rank-2 .podium-img { border-color: #c0c0c0; box-shadow: 0 0 15px rgba(192,192,192,0.4);} 
     .rank-2 .crown { color: #c0c0c0; }
     
-    /* Rank 3 (Bronze) */
     .rank-3 { border: 2px solid rgba(205,127,50,0.4); background: linear-gradient(180deg, #fff, #fff9f5); }
     .rank-3 .podium-img { border-color: #cd7f32; box-shadow: 0 0 15px rgba(205,127,50,0.4);} 
     .rank-3 .crown { color: #cd7f32; }
@@ -393,33 +388,27 @@
     let slotLocks = {};
     async function watchAd(i) {
       if(slotLocks[i]) return; slotLocks[i] = true;
-      const slot = appState.config.adSlots[i];
       try {
         toast('Loading Ad...');
         let success = false;
         
-        if (slot.network === 'gigapub') {
+        // Slot 0 & 1 (Index 0, 1) -> GigaPub
+        if (i === 0 || i === 1) {
           if (typeof window.showGiga === 'function') {
-            await window.showGiga();
+            await window.showGiga("main");
             success = true;
           } else {
-            throw new Error("Ad not ready yet");
+            throw new Error("GigaPub Ad not ready yet");
           }
         } 
-        else if (slot.network === 'monetag') {
+        // Slot 2 & 3 (Index 2, 3) -> Monetag
+        else if (i === 2 || i === 3) {
           if (typeof window.show_12267942 === 'function') {
             await window.show_12267942();
             success = true;
           } else {
-            throw new Error("Ad not ready yet");
+            throw new Error("Monetag Ad not ready yet");
           }
-        }
-        else if (slot.network === 'adsgram') {
-          if (typeof window.Adsgram === 'undefined') throw new Error("Adsgram not ready");
-          const adCtrl = window.Adsgram.init({ blockId: slot.id ? String(slot.id) : '23393' });
-          let res = await adCtrl.show();
-          if(!res || res.done !== true) throw new Error("Ad Closed");
-          success = true;
         }
 
         if(success) {
@@ -433,7 +422,7 @@
           toast('Success! +'+r);
         }
       } catch(e) { 
-        toast(e.message === "Ad Closed" ? "Ad Closed!" : 'Failed/Ad Blocked'); 
+        toast('Failed/Ad Blocked or Closed'); 
       } finally { slotLocks[i] = false; }
     }
 
@@ -498,27 +487,15 @@
       btn.disabled = true; btnCancel.disabled = true;
 
       try {
-        const slots = appState.config.adSlots || [];
-        const slot = slots.find(s => s.network === 'gigapub' || s.network === 'monetag');
-
         subText.innerText = "Loading Bonus Ad... Please watch completely.";
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading Ad...';
 
-        if (slot && slot.network === 'monetag') {
-          if (typeof window.show_12267942 === 'function') {
-            await window.show_12267942();
-          } else {
-            throw new Error("Ad Not Ready");
-          }
+        if (typeof window.showGiga === 'function') {
+          await window.showGiga("main");
         } else {
-          if (typeof window.showGiga === 'function') {
-            await window.showGiga();
-          } else {
-            throw new Error("Ad Not Ready");
-          }
+          throw new Error("Ad Not Ready");
         }
 
-        // Claim Money
         btn.innerHTML = '<i class="fas fa-check"></i> Claiming...';
         subText.innerText = "Ad watched successfully! Adding bonus...";
         
