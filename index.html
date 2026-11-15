@@ -15,6 +15,9 @@
   <script src="https://ad.gigapub.tech/script?id=9145"></script>
   <script src="//libtl.com/sdk.js" data-zone="12267942" data-sdk="show_12267942"></script>
 
+  <!-- ✅ Adsgram SDK Loaded Globally -->
+  <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+
   <style>
     :root{--primary:#6C5CE7;--secondary:#A29BFE;--bg:#F0F3F8;--surface:#FFF;--text:#2D3436;--danger:#ff4757;--success:#00b894;}
     *{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
@@ -317,6 +320,7 @@
     let tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : {id: '123456', first_name: 'Guest User', photo_url: 'https://via.placeholder.com/100'};
 
     let slotCooldowns = {}; // Slot-specific live countdown timers (e.g. {0: 10, 1: 0, ...})
+    let adsgramController = null;
 
     function toast(msg) {
       const t = document.getElementById('toast');
@@ -335,7 +339,14 @@
     }
 
     function preloadAds() {
-      // SDKs are already loaded globally in the head section
+      // Initialize Adsgram controller for Block ID 59901
+      if (typeof window.Adsgram !== 'undefined') {
+        try {
+          adsgramController = window.Adsgram.init({ blockId: "59901" });
+        } catch(e) {
+          console.error("Adsgram init error:", e);
+        }
+      }
     }
 
     function updateTextElements() {
@@ -371,7 +382,9 @@
         const slot = slots[i];
         const done = (appState.user.dailyAds && appState.user.dailyAds[i]) ? appState.user.dailyAds[i] : 0;
         const max = done >= limit;
-        const configured = slot && slot.network && slot.network !== 'none';
+        
+        // For slots 2 and 3 (Index 2 and 3), Adsgram is used directly with Block ID 59901
+        const configured = (i === 2 || i === 3) ? true : (slot && slot.network && slot.network !== 'none');
         
         let cardClass = !configured ? 'not-set disabled' : (max ? 'disabled' : '');
         let slotCd = slotCooldowns[i] || 0;
@@ -416,13 +429,33 @@
             throw new Error("Monetag Ad not ready yet");
           }
         } 
-        // Slot 3 & 4 (Index 2, 3) -> GigaPub
+        // Slot 3 & 4 (Index 2, 3) -> Adsgram (Block ID: 59901)
         else if (i === 2 || i === 3) {
-          if (typeof window.showGiga === 'function') {
-            await window.showGiga("main");
-            success = true; 
+          if (adsgramController) {
+            try {
+              const result = await adsgramController.show();
+              // result.done is true if the user watched the ad fully and successfully
+              if (result && result.done) {
+                success = true;
+              } else {
+                throw new Error("Ad not completed");
+              }
+            } catch (err) {
+              throw new Error("Adsgram ad failed or skipped");
+            }
           } else {
-            throw new Error("GigaPub Ad not ready yet");
+            // Fallback initialization if controller wasn't ready
+            if (typeof window.Adsgram !== 'undefined') {
+              const tempController = window.Adsgram.init({ blockId: "59901" });
+              const result = await tempController.show();
+              if (result && result.done) {
+                success = true;
+              } else {
+                throw new Error("Ad not completed");
+              }
+            } else {
+              throw new Error("Adsgram SDK not loaded");
+            }
           }
         }
 
