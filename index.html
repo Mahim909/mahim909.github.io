@@ -316,6 +316,8 @@
     let isBooted = false;
     let tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : {id: '123456', first_name: 'Guest User', photo_url: 'https://via.placeholder.com/100'};
 
+    let slotCooldowns = {}; // Slot-specific live countdown timers (e.g. {0: 10, 1: 0, ...})
+
     function toast(msg) {
       const t = document.getElementById('toast');
       t.innerText = msg; t.classList.add('show');
@@ -370,16 +372,25 @@
         const done = (appState.user.dailyAds && appState.user.dailyAds[i]) ? appState.user.dailyAds[i] : 0;
         const max = done >= limit;
         const configured = slot && slot.network && slot.network !== 'none';
-        const cardClass = !configured ? 'not-set disabled' : (max ? 'disabled' : '');
+        
+        let cardClass = !configured ? 'not-set disabled' : (max ? 'disabled' : '');
+        let slotCd = slotCooldowns[i] || 0;
+        if (slotCd > 0) cardClass += ' disabled'; // disable specific slot during its cooldown
+
         const extraClass = (i===0?'slot-1':i===1?'slot-2':i===2?'slot-3':'slot-4');
         const icon = (i===0?'fa-play':i===1?'fa-circle-play':i===2?'fa-bolt':'fa-gem');
+        
+        let pillText = configured ? `${done}/${limit} Watched` : `Not Configured`;
+        if (slotCd > 0) {
+          pillText = `Wait ${slotCd}s`;
+        }
 
         el.innerHTML += `
-          <div class="ad-card ${extraClass} ${cardClass}" onclick="${(!configured||max)?'':'watchAd('+i+')'}">
+          <div id="ad-card-${i}" class="ad-card ${extraClass} ${cardClass}" onclick="${(!configured||max||slotCd>0)?'':'watchAd('+i+')'}">
             <div class="ad-inner">
               <i class="fas ${icon}"></i> <h4>Ad Slot ${i+1}</h4>
               <div class="reward-pill"><i class="fas fa-coins"></i> +${reward} ${sym}</div>
-              ${configured ? `<div class="progress-pill">${done}/${limit} Watched</div>` : `<div class="progress-pill">Not Configured</div>`}
+              <div class="progress-pill" id="ad-pill-${i}">${pillText}</div>
             </div>
           </div>`;
       }
@@ -387,6 +398,10 @@
 
     let slotLocks = {};
     async function watchAd(i) {
+      if ((slotCooldowns[i] || 0) > 0) {
+        toast(`Please wait ${slotCooldowns[i]}s before watching this ad again!`);
+        return;
+      }
       if(slotLocks[i]) return; slotLocks[i] = true;
       try {
         toast('Loading Ad...');
@@ -396,7 +411,7 @@
         if (i === 0 || i === 1) {
           if (typeof window.show_12267942 === 'function') {
             await window.show_12267942();
-            success = true;
+            success = true; 
           } else {
             throw new Error("Monetag Ad not ready yet");
           }
@@ -405,13 +420,25 @@
         else if (i === 2 || i === 3) {
           if (typeof window.showGiga === 'function') {
             await window.showGiga("main");
-            success = true;
+            success = true; 
           } else {
             throw new Error("GigaPub Ad not ready yet");
           }
         }
 
         if(success) {
+          // Trigger slot-specific 10 seconds live countdown cooldown
+          slotCooldowns[i] = 10;
+          renderAds(); // Immediately update specific slot to show cooldown state
+
+          const timerInterval = setInterval(() => {
+            slotCooldowns[i]--;
+            renderAds();
+            if (slotCooldowns[i] <= 0) {
+              clearInterval(timerInterval);
+            }
+          }, 1000);
+
           const r = Number(appState.config.adReward || 0.5);
           let newBal = (appState.user.balance || 0) + r;
           let newEarn = (appState.user.totalEarned || 0) + r;
@@ -422,7 +449,7 @@
           toast('Success! +'+r);
         }
       } catch(e) { 
-        toast('Failed/Ad Blocked or Closed'); 
+        toast('Ad skipped or closed without completion! No reward added.'); 
       } finally { slotLocks[i] = false; }
     }
 
