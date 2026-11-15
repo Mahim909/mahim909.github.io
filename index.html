@@ -392,22 +392,22 @@
         toast('Loading Ad...');
         let success = false;
         
-        // Slot 0 & 1 (Index 0, 1) -> GigaPub
+        // Slot 1 & 2 (Index 0, 1) -> Monetag
         if (i === 0 || i === 1) {
-          if (typeof window.showGiga === 'function') {
-            await window.showGiga("main");
-            success = true;
-          } else {
-            throw new Error("GigaPub Ad not ready yet");
-          }
-        } 
-        // Slot 2 & 3 (Index 2, 3) -> Monetag
-        else if (i === 2 || i === 3) {
           if (typeof window.show_12267942 === 'function') {
             await window.show_12267942();
             success = true;
           } else {
             throw new Error("Monetag Ad not ready yet");
+          }
+        } 
+        // Slot 3 & 4 (Index 2, 3) -> GigaPub
+        else if (i === 2 || i === 3) {
+          if (typeof window.showGiga === 'function') {
+            await window.showGiga("main");
+            success = true;
+          } else {
+            throw new Error("GigaPub Ad not ready yet");
           }
         }
 
@@ -490,8 +490,8 @@
         subText.innerText = "Loading Bonus Ad... Please watch completely.";
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading Ad...';
 
-        if (typeof window.showGiga === 'function') {
-          await window.showGiga("main");
+        if (typeof window.show_12267942 === 'function') {
+          await window.show_12267942();
         } else {
           throw new Error("Ad Not Ready");
         }
