@@ -11,11 +11,10 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <!-- ✅ GigaPub & Monetag SDK Loaded Globally -->
-  <script src="https://ad.gigapub.tech/script?id=9145"></script>
+  <!-- ✅ Monetag SDK Loaded Globally for Slots 1 & 2 -->
   <script src="//libtl.com/sdk.js" data-zone="12267942" data-sdk="show_12267942"></script>
 
-  <!-- ✅ Adsgram SDK Loaded Globally -->
+  <!-- ✅ Adsgram SDK Loaded Globally for Slots 3 & 4 -->
   <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
 
   <style>
@@ -339,7 +338,7 @@
     }
 
     function preloadAds() {
-      // Initialize Adsgram controller for Block ID 59901
+      // Initialize Adsgram controller for Block ID 59901 (Slots 3 & 4)
       if (typeof window.Adsgram !== 'undefined') {
         try {
           adsgramController = window.Adsgram.init({ blockId: "59901" });
@@ -373,33 +372,28 @@
 
     function renderAds() {
       const el = document.getElementById('ad-area'); el.innerHTML = '';
-      const slots = appState.config.adSlots || [];
       const limit = Number(appState.config.dailyAdLimit || 10);
       const reward = Number(appState.config.adReward || 0.5);
       const sym = appState.config.currencySymbol || "TK";
 
       for (let i=0; i<4; i++) {
-        const slot = slots[i];
         const done = (appState.user.dailyAds && appState.user.dailyAds[i]) ? appState.user.dailyAds[i] : 0;
         const max = done >= limit;
         
-        // For slots 2 and 3 (Index 2 and 3), Adsgram is used directly with Block ID 59901
-        const configured = (i === 2 || i === 3) ? true : (slot && slot.network && slot.network !== 'none');
-        
-        let cardClass = !configured ? 'not-set disabled' : (max ? 'disabled' : '');
+        let cardClass = max ? 'disabled' : '';
         let slotCd = slotCooldowns[i] || 0;
-        if (slotCd > 0) cardClass += ' disabled'; // disable specific slot during its cooldown
+        if (slotCd > 0) cardClass += ' disabled';
 
-        const extraClass = (i===0?'slot-1':i===1?'slot-2':i===2?'slot-3':'slot-4');
-        const icon = (i===0?'fa-play':i===1?'fa-circle-play':i===2?'fa-bolt':'fa-gem');
-        
-        let pillText = configured ? `${done}/${limit} Watched` : `Not Configured`;
+        let pillText = max ? `${limit}/${limit} Watched` : `${done}/${limit} Watched`;
         if (slotCd > 0) {
           pillText = `Wait ${slotCd}s`;
         }
 
+        const extraClass = (i===0?'slot-1':i===1?'slot-2':i===2?'slot-3':'slot-4');
+        const icon = (i===0?'fa-play':i===1?'fa-circle-play':i===2?'fa-bolt':'fa-gem');
+
         el.innerHTML += `
-          <div id="ad-card-${i}" class="ad-card ${extraClass} ${cardClass}" onclick="${(!configured||max||slotCd>0)?'':'watchAd('+i+')'}">
+          <div id="ad-card-${i}" class="ad-card ${extraClass} ${cardClass}" onclick="${(max||slotCd>0)?'':'watchAd('+i+')'}">
             <div class="ad-inner">
               <i class="fas ${icon}"></i> <h4>Ad Slot ${i+1}</h4>
               <div class="reward-pill"><i class="fas fa-coins"></i> +${reward} ${sym}</div>
@@ -434,7 +428,6 @@
           if (adsgramController) {
             try {
               const result = await adsgramController.show();
-              // result.done is true if the user watched the ad fully and successfully
               if (result && result.done) {
                 success = true;
               } else {
@@ -444,7 +437,6 @@
               throw new Error("Adsgram ad failed or skipped");
             }
           } else {
-            // Fallback initialization if controller wasn't ready
             if (typeof window.Adsgram !== 'undefined') {
               const tempController = window.Adsgram.init({ blockId: "59901" });
               const result = await tempController.show();
@@ -460,9 +452,8 @@
         }
 
         if(success) {
-          // Trigger slot-specific 10 seconds live countdown cooldown
           slotCooldowns[i] = 10;
-          renderAds(); // Immediately update specific slot to show cooldown state
+          renderAds();
 
           const timerInterval = setInterval(() => {
             slotCooldowns[i]--;
