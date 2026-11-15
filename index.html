@@ -11,6 +11,10 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
+  <!-- ✅ GigaPub & Monetag SDK Loaded Globally -->
+  <script src="https://ad.gigapub.tech/script?id=9145"></script>
+  <script src="//libtl.com/sdk.js" data-zone="12267942" data-sdk="show_12267942"></script>
+
   <style>
     /* ✅ ORIGINAL 3D PREMIUM DESIGN */
     :root{--primary:#6C5CE7;--secondary:#A29BFE;--bg:#F0F3F8;--surface:#FFF;--text:#2D3436;--danger:#ff4757;--success:#00b894;}
@@ -334,18 +338,7 @@
     }
 
     function preloadAds() {
-      const slots = appState.config.adSlots || [];
-      slots.forEach(slot => {
-        if(slot.network === 'monetag' && slot.id && !document.querySelector(`script[data-zone="${slot.id}"]`)){
-          const sc = document.createElement('script'); sc.src = '//libtl.com/sdk.js'; sc.dataset.zone = slot.id; sc.dataset.sdk = 'show_' + slot.id; document.body.appendChild(sc);
-        } 
-        else if(slot.network === 'adsgram' && !document.getElementById('adsg-script')){
-          const sc = document.createElement('script'); sc.id='adsg-script'; sc.src = 'https://sad.adsgram.ai/js/sad.min.js'; document.body.appendChild(sc);
-        }
-        else if(slot.network === 'gigapub' && !document.getElementById('giga-script')){
-          const sc = document.createElement('script'); sc.id='giga-script'; sc.src = 'https://ad.gigapub.tech/script?id=1'; document.body.appendChild(sc);
-        }
-      });
+      // SDKs are already loaded globally in the head section
     }
 
     function updateTextElements() {
@@ -405,16 +398,24 @@
         toast('Loading Ad...');
         let success = false;
         
-        if (slot.network === 'monetag') {
-          if (typeof window['show_'+slot.id] === 'function') { await window['show_'+slot.id](); success = true; } 
-          else throw new Error("Please wait, Ad loading...");
+        if (slot.network === 'gigapub') {
+          if (typeof window.showGiga === 'function') {
+            await window.showGiga();
+            success = true;
+          } else {
+            throw new Error("Ad not ready yet");
+          }
         } 
-        else if (slot.network === 'gigapub') {
-          if (typeof window.showGiga === 'function') { await window.showGiga(); success = true; }
-          else throw new Error("Please wait, Ad loading...");
+        else if (slot.network === 'monetag') {
+          if (typeof window.show_12267942 === 'function') {
+            await window.show_12267942();
+            success = true;
+          } else {
+            throw new Error("Ad not ready yet");
+          }
         }
         else if (slot.network === 'adsgram') {
-          if(typeof window.Adsgram === 'undefined') throw new Error("Please wait, Ad loading...");
+          if (typeof window.Adsgram === 'undefined') throw new Error("Adsgram not ready");
           const adCtrl = window.Adsgram.init({ blockId: slot.id ? String(slot.id) : '23393' });
           let res = await adCtrl.show();
           if(!res || res.done !== true) throw new Error("Ad Closed");
@@ -498,33 +499,28 @@
 
       try {
         const slots = appState.config.adSlots || [];
-        const agSlot = slots.find(s => s.network === 'adsgram');
-        const mtSlot = slots.find(s => s.network === 'monetag');
+        const slot = slots.find(s => s.network === 'gigapub' || s.network === 'monetag');
 
-        // 1. Show Adsgram Ad First
-        if (agSlot && agSlot.id) {
-          subText.innerText = "Loading 1st Ad (Adsgram)... Please watch the ad completely.";
-          btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading Ad 1...';
-          if(typeof window.Adsgram === 'undefined') throw new Error("Ad Network Not Ready");
-          const adCtrl = window.Adsgram.init({ blockId: String(agSlot.id) });
-          let res = await adCtrl.show();
-          if(!res || res.done !== true) throw new Error("Ad Closed or Cancelled");
-        }
+        subText.innerText = "Loading Bonus Ad... Please watch completely.";
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading Ad...';
 
-        // 2. Show Monetag Ad Second
-        if (mtSlot && mtSlot.id) {
-          subText.innerText = "Loading 2nd Ad (Monetag)... This is the final ad.";
-          btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading Ad 2...';
-          if (typeof window['show_'+mtSlot.id] === 'function') {
-            await window['show_'+mtSlot.id]();
+        if (slot && slot.network === 'monetag') {
+          if (typeof window.show_12267942 === 'function') {
+            await window.show_12267942();
           } else {
-            throw new Error("Ad Network Not Ready");
+            throw new Error("Ad Not Ready");
+          }
+        } else {
+          if (typeof window.showGiga === 'function') {
+            await window.showGiga();
+          } else {
+            throw new Error("Ad Not Ready");
           }
         }
 
-        // 3. Claim Money
+        // Claim Money
         btn.innerHTML = '<i class="fas fa-check"></i> Claiming...';
-        subText.innerText = "Ads watched successfully! Adding bonus...";
+        subText.innerText = "Ad watched successfully! Adding bonus...";
         
         const amt = Number(appState.config.dailyBonusAmount || 20);
         const newBal = (appState.user.balance || 0) + amt;
@@ -539,7 +535,7 @@
         hideBonus(); 
         toast('Bonus Claimed Successfully! +' + amt);
       } catch(e) { 
-        toast(e.message === "Ad Closed or Cancelled" ? "You didn't finish watching the ad, bonus canceled." : "Failed to load ad, please try again.");
+        toast("You didn't finish watching the ad, bonus canceled.");
         subText.innerText = "Bonus will be canceled if you skip or close the ad. Please try again.";
       } finally { 
         btn.disabled = false; btnCancel.disabled = false;
@@ -576,7 +572,6 @@
     }
 
     function getRefLink() { 
-      // Link should be your telegram bot username + /app (shortname) 
       return `https://t.me/${appState.config.botUsername||"bot"}/app?startapp=${appState.user.id}`; 
     }
     
@@ -588,15 +583,11 @@
     function openTutorial() { if(appState.config.tutorialLink) window.open(appState.config.tutorialLink, '_blank'); else toast('No tutorial available'); }
     function openSupport() { if(appState.config.supportLink) window.open(appState.config.supportLink, '_blank'); }
 
-    // ==========================================
-    // ✅ FIXED REFERRAL AND INITIALIZATION LOGIC 
-    // ==========================================
     window.onload = () => {
       document.getElementById('u-name').innerText = tgUser.first_name;
       document.getElementById('u-id').innerText = 'ID: ' + tgUser.id;
       if(tgUser.photo_url) document.getElementById('u-img').src = tgUser.photo_url;
 
-      // 1. Always Listen to Admin Config
       db.ref('config').on('value', snap => {
         if(snap.exists()) {
           appState.config = snap.val();
@@ -605,13 +596,11 @@
         }
       });
 
-      // 2. Initialize User Carefully to Ensure Referrals Count 100%
       const userRef = db.ref('users/' + tgUser.id);
       userRef.once('value').then(async snap => {
         const today = todayStr();
 
         if(!snap.exists()) {
-          // --- It's a brand new user! ---
           appState.user = { 
             id: tgUser.id, 
             name: tgUser.first_name, 
@@ -625,27 +614,22 @@
             dailyBonusDate: '' 
           };
           
-          // Save new user immediately
           await userRef.set(appState.user);
 
-          // --- Process The Referral Link System ---
           let refBy = (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) ? tg.initDataUnsafe.start_param : null;
           
-          if(!refBy) { // Fallback if testing outside telegram natively
+          if(!refBy) {
              const urlParams = new URLSearchParams(window.location.search);
              refBy = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp');
           }
 
           if(refBy && String(refBy) !== String(tgUser.id)) {
-             // We get the actual ref bonus directly from the live config
              let cSnap = await db.ref('config').once('value');
              let rBonus = (cSnap.exists() && cSnap.val().refBonus) ? Number(cSnap.val().refBonus) : 5;
 
              let refSnap = await db.ref('users/' + refBy).once('value');
              if(refSnap.exists()){
                 let r = refSnap.val();
-                
-                // ADD the bonus to the referring person's account
                 await db.ref('users/' + refBy).update({
                    referrals: (r.referrals || 0) + 1,
                    balance: (r.balance || 0) + rBonus,
@@ -655,7 +639,6 @@
           }
         }
 
-        // 3. Start Live Listener AFTER Initialization
         userRef.on('value', async liveSnap => {
           if(liveSnap.exists()) {
             appState.user = liveSnap.val();
@@ -682,7 +665,6 @@
       });
     };
 
-    // ✅ FIXED LEADERBOARD (Top 10, Safe Images, Fixed CSS Gaps)
     async function loadLeaderboard() {
       const sym = appState.config.currencySymbol || "TK";
       const snap = await db.ref('users').orderByChild('balance').limitToLast(10).once('value');
