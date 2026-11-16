@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>AdPulse Hub & Rewards</title>
+  <title>Earn Wallet</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
   
@@ -14,8 +14,8 @@
   <!-- ✅ Monetag SDK Loaded Globally for Slots 1 & 2 -->
   <script src="//libtl.com/sdk.js" data-zone="12267942" data-sdk="show_12267942"></script>
 
-  <!-- ✅ Adsbitvex SDK Loaded Globally for Slots 3 & 4 (ID: 000577) -->
-  <script src="https://adsbitvex.com/script?id=000577"></script>
+  <!-- ✅ Adsgram SDK Loaded Globally for Slots 3 & 4 -->
+  <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
 
   <style>
     :root{--primary:#6C5CE7;--secondary:#A29BFE;--bg:#F0F3F8;--surface:#FFF;--text:#2D3436;--danger:#ff4757;--success:#00b894;}
@@ -88,13 +88,6 @@
     .slot-3 .ad-inner{background:linear-gradient(145deg,#f2fffa,#dcfff2);} .slot-3 .ad-inner i{color:#00b894;}
     .slot-4 .ad-inner{background:linear-gradient(145deg,#fff2fb,#ffe0f3);} .slot-4 .ad-inner i{color:#e84393;}
     .ad-card.disabled{opacity:.6;filter:grayscale(1);pointer-events:none;}
-
-    /* Mini Utility Game Section */
-    .utility-box { background: linear-gradient(135deg, #6C5CE7, #a29bfe); margin: 0 20px 20px; padding: 20px; border-radius: 20px; color: #fff; text-align: center; box-shadow: 0 10px 20px rgba(108,92,231,0.3); }
-    .utility-box h3 { font-size: 1.1rem; font-weight: 800; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-    .utility-box p { font-size: 0.82rem; opacity: 0.9; margin-bottom: 12px; }
-    .clicker-btn { background: #fff; color: #6C5CE7; border: none; padding: 10px 24px; font-weight: 800; border-radius: 50px; cursor: pointer; font-size: 0.95rem; box-shadow: 0 4px 15px rgba(0,0,0,0.15); transition: 0.2s; }
-    .clicker-btn:active { transform: scale(0.95); }
 
     /* Tasks */
     .task-list{display:flex;flex-direction:column;gap:12px;padding:0 20px 30px;}
@@ -243,13 +236,6 @@
     <!-- ================= TAB 1: HOME ================= -->
     <div id="page-home" class="page-section active">
       
-      <!-- Mini Tap Utility Feature -->
-      <div class="utility-box">
-        <h3><i class="fas fa-gamepad"></i> Tap Tap Booster Hub</h3>
-        <p>Tap the pulse booster to generate engagement score and test interaction speed!</p>
-        <button class="clicker-btn" onclick="triggerTapBoost()"><i class="fas fa-bolt"></i> Tap to Boost (+0.1)</button>
-      </div>
-
       <!-- Open Daily Bonus Button -->
       <div class="sec-head"><i class="fas fa-gift"></i> Daily Rewards</div>
       <div style="padding: 0 20px 15px;">
@@ -332,8 +318,8 @@
     let isBooted = false;
     let tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : {id: '123456', first_name: 'Guest User', photo_url: 'https://via.placeholder.com/100'};
 
-    let slotCooldowns = {}; 
-    let adsbitvexController = null;
+    let slotCooldowns = {}; // Slot-specific live countdown timers (e.g. {0: 10, 1: 0, ...})
+    let adsgramController = null;
 
     function toast(msg) {
       const t = document.getElementById('toast');
@@ -352,23 +338,14 @@
     }
 
     function preloadAds() {
-      // Initialize Adsbitvex controller for ID 000577 (Slots 3 & 4)
-      if (typeof window.Adsbitvex !== 'undefined') {
+      // Initialize Adsgram controller for Block ID 59901 (Slots 3 & 4)
+      if (typeof window.Adsgram !== 'undefined') {
         try {
-          adsbitvexController = window.Adsbitvex.init({ id: "000577" });
+          adsgramController = window.Adsgram.init({ blockId: "59901" });
         } catch(e) {
-          console.error("Adsbitvex init error:", e);
+          console.error("Adsgram init error:", e);
         }
       }
-    }
-
-    async function triggerTapBoost() {
-      let r = 0.1;
-      let newBal = (appState.user.balance || 0) + r;
-      let newEarn = (appState.user.totalEarned || 0) + r;
-      await db.ref('users/' + appState.user.id).update({ balance: newBal, totalEarned: newEarn });
-      toast('Booster Triggered! +0.1 Score');
-      if(tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
     }
 
     function updateTextElements() {
@@ -446,33 +423,30 @@
             throw new Error("Monetag Ad not ready yet");
           }
         } 
-        // Slot 3 & 4 (Index 2, 3) -> Adsbitvex (ID: 000577)
+        // Slot 3 & 4 (Index 2, 3) -> Adsgram (Block ID: 59901)
         else if (i === 2 || i === 3) {
-          if (adsbitvexController && typeof adsbitvexController.show === 'function') {
+          if (adsgramController) {
             try {
-              const result = await adsbitvexController.show();
-              if (result && (result.done || result.success)) {
+              const result = await adsgramController.show();
+              if (result && result.done) {
                 success = true;
               } else {
                 throw new Error("Ad not completed");
               }
             } catch (err) {
-              throw new Error("Adsbitvex ad failed or skipped");
-            }
-          } else if (typeof window.Adsbitvex !== 'undefined' && typeof window.Adsbitvex.show === 'function') {
-            const result = await window.Adsbitvex.show();
-            if (result && (result.done || result.success)) {
-              success = true;
-            } else {
-              throw new Error("Ad not completed");
+              throw new Error("Adsgram ad failed or skipped");
             }
           } else {
-            // Fallback direct check if global function exists
-            if (typeof window.show_000577 === 'function') {
-              await window.show_000577();
-              success = true;
+            if (typeof window.Adsgram !== 'undefined') {
+              const tempController = window.Adsgram.init({ blockId: "59901" });
+              const result = await tempController.show();
+              if (result && result.done) {
+                success = true;
+              } else {
+                throw new Error("Ad not completed");
+              }
             } else {
-              throw new Error("Adsbitvex SDK not ready");
+              throw new Error("Adsgram SDK not loaded");
             }
           }
         }
@@ -770,3 +744,4 @@
   </script>
 </body>
 </html>
+
