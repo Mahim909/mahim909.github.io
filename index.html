@@ -399,7 +399,7 @@
             <div class="space-y-2">
                 <div class="flex items-center justify-between px-1">
                     <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Your Squad (<span id="friends-count">0</span>)</h3>
-                    <button onclick="simulateFriendJoin()" class="text-[11px] text-cyan-400 hover:underline font-medium">+ Simulate Invite</button>
+                    <button onclick="refreshReferrals()" class="text-[11px] text-cyan-400 hover:underline font-medium"><i class="fa-solid fa-rotate-right mr-1"></i>Refresh</button>
                 </div>
                 <div id="friends-list-container" class="space-y-2"></div>
             </div>
@@ -633,6 +633,7 @@
             tttWins: 0,
             quizWins: 0,
             friends: [],
+            referredCount: 0,
             referredBy: null
         };
 
@@ -642,6 +643,26 @@
             username: 'adpulse_user',
             isPremium: false
         };
+
+        function extractStartParam() {
+            try {
+                if (window.Telegram?.WebApp?.initDataUnsafe?.start_param) {
+                    return String(window.Telegram.WebApp.initDataUnsafe.start_param).trim();
+                }
+            } catch (e) {}
+
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const qp = urlParams.get('tgWebAppStartParam') || urlParams.get('startapp') || urlParams.get('start');
+                if (qp) return String(qp).trim();
+
+                const hash = window.location.hash || '';
+                const match = hash.match(/tgWebAppStartParam=([^&]+)/);
+                if (match && match[1]) return decodeURIComponent(match[1]).trim();
+            } catch (e) {}
+
+            return null;
+        }
 
         function initTelegramSDK() {
             let startParam = null;
@@ -660,15 +681,12 @@
                         tgUser.username = u.username || `user_${tgUser.id}`;
                         tgUser.isPremium = Boolean(u.is_premium);
                     }
-
-                    // Extract Start Parameter (Referral ID)
-                    if (tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
-                        startParam = tg.initDataUnsafe.start_param;
-                    }
                 }
             } catch (err) {
                 console.warn('Not inside Telegram WebApp environment.');
             }
+
+            startParam = extractStartParam();
 
             document.getElementById('user-name').textContent = tgUser.firstName;
             document.getElementById('user-handle').textContent = tgUser.username ? `@${tgUser.username}` : `ID: ${tgUser.id}`;
@@ -683,11 +701,10 @@
             document.getElementById('ref-id-display').textContent = tgUser.id;
             document.getElementById('referral-link-input').value = refLink;
 
-            // Load user data and handle referral logic if startParam exists
             loadUserDataFromFirebase(startParam);
         }
 
-        // --- Firebase RTDB Sync & Referral Handling ---
+        // --- Firebase RTDB Sync & Real Referral Handling ---
         async function loadUserDataFromFirebase(startParam) {
             try {
                 const res = await fetch(`${FIREBASE_DB_URL}/users/${tgUser.id}.json`);
@@ -695,14 +712,16 @@
                 
                 if (data) {
                     appState = { ...appState, ...data };
+                    if (!Array.isArray(appState.friends)) appState.friends = [];
+                    if (!appState.referredBy && startParam && startParam !== String(tgUser.id)) {
+                        appState.referredBy = startParam;
+                        await addReferralToOwner(startParam, tgUser);
+                    }
+                    await saveUserDataToFirebase();
                 } else {
-                    // New User Account Creation in Firebase
                     if (startParam && startParam !== String(tgUser.id)) {
                         appState.referredBy = startParam;
-                        // Give welcome bonus for using ref link
                         appState.points += 10;
-                        
-                        // Notify and update referrer in Firebase
                         await addReferralToOwner(startParam, tgUser);
                     }
                     await saveUserDataToFirebase();
@@ -713,19 +732,37 @@
             updateAllUI();
         }
 
+        async function refreshReferrals() {
+            triggerHaptic('light');
+            try {
+                const res = await fetch(`${FIREBASE_DB_URL}/users/${tgUser.id}.json`);
+                const data = await res.json();
+                if (data) {
+                    appState.friends = Array.isArray(data.friends) ? data.friends : [];
+                    appState.referredCount = data.referredCount || 0;
+                    await saveUserDataToFirebase();
+                    updateAllUI();
+                    showToast('Squad Updated', 'Latest real referrals synced from Firebase.', 'success');
+                }
+            } catch (e) {
+                showToast('Sync Failed', 'Could not refresh referrals right now.', 'error');
+            }
+        }
+
         async function addReferralToOwner(referrerId, newUser) {
             try {
                 const refRes = await fetch(`${FIREBASE_DB_URL}/users/${referrerId}.json`);
                 const referrerData = await refRes.json();
                 if (referrerData) {
-                    if (!referrerData.friends) referrerData.friends = [];
-                    // Check if already referred
-                    const exists = referrerData.friends.some(f => f.id === newUser.id);
+                    if (!Array.isArray(referrerData.friends)) referrerData.friends = [];
+                    const exists = referrerData.friends.some(f => String(f.id) === String(newUser.id));
                     if (!exists) {
                         referrerData.friends.push({
                             id: newUser.id,
                             name: newUser.firstName,
-                            username: newUser.username
+                            username: newUser.username || `user_${newUser.id}`,
+                            isPremium: Boolean(newUser.isPremium),
+                            joinedAt: new Date().toISOString()
                         });
                         await fetch(`${FIREBASE_DB_URL}/users/${referrerId}.json`, {
                             method: 'PUT',
@@ -1396,7 +1433,7 @@
             try {
                 document.execCommand('copy');
                 triggerHaptic('success');
-                showToast('Link Copied!', 'Share to earn +10 AI tokens (Ad required).', 'success');
+                showToast('Link Copied!', 'Share to earn +10 AI tokens when a friend joins.', 'success');
             } catch (err) {}
         }
 
@@ -1413,29 +1450,33 @@
 
         function renderFriends() {
             const container = document.getElementById('friends-list-container');
-            document.getElementById('friends-count').textContent = appState.friends.length;
+            const pendingList = Array.isArray(appState.friends) ? appState.friends : [];
+            const totalReferred = (appState.referredCount || 0) + pendingList.length;
+            document.getElementById('friends-count').textContent = totalReferred;
             container.innerHTML = '';
             
-            if (appState.friends.length === 0) {
-                container.innerHTML = `<div class="p-3 text-center glass-card rounded-2xl text-xs text-slate-400">No friends referred yet. Invite friends to start earning!</div>`;
+            if (pendingList.length === 0) {
+                container.innerHTML = `<div class="p-3 text-center glass-card rounded-2xl text-xs text-slate-400">${totalReferred > 0 ? 'All current referrals claimed! Invite more friends.' : 'No friends referred yet. Share your link to invite real friends!'}</div>`;
                 return;
             }
 
-            appState.friends.forEach((friend, index) => {
-                const initials = friend.name.substring(0, 2).toUpperCase();
+            pendingList.forEach((friend, index) => {
+                const safeName = friend.name || 'Telegram User';
+                const safeHandle = friend.username || `user_${friend.id || index}`;
+                const initials = safeName.substring(0, 2).toUpperCase();
                 const el = document.createElement('div');
                 el.className = 'glass-card rounded-2xl p-3 flex items-center justify-between';
                 el.innerHTML = `
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500/40 to-cyan-500/40 border border-white/10 flex items-center justify-center text-xs font-bold text-white">${initials}</div>
-                        <div>
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500/40 to-cyan-500/40 border border-white/10 flex items-center justify-center text-xs font-bold text-white shrink-0">${initials}</div>
+                        <div class="min-w-0">
                             <div class="flex items-center gap-1.5">
-                                <span class="text-xs font-bold text-white">${friend.name}</span>
+                                <span class="text-xs font-bold text-white truncate">${safeName}</span>
                             </div>
-                            <span class="text-[10px] text-slate-400">@${friend.username}</span>
+                            <span class="text-[10px] text-slate-400 truncate block">@${safeHandle}</span>
                         </div>
                     </div>
-                    <button onclick="claimRefReward(${index})" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-400 to-purple-600 text-slate-950 font-bold text-xs active:scale-95 transition">
+                    <button onclick="claimRefReward(${index})" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-400 to-purple-600 text-slate-950 font-bold text-xs active:scale-95 transition shrink-0">
                         Claim +10 AI (Ad)
                     </button>
                 `;
@@ -1444,9 +1485,11 @@
         }
 
         function claimRefReward(index) {
+            if (!Array.isArray(appState.friends) || !appState.friends[index]) return;
             triggerHaptic('light');
             playSponsorAd('Referral Claim Ad...', () => {
                 appState.points += 10;
+                appState.referredCount = (appState.referredCount || 0) + 1;
                 appState.friends.splice(index, 1);
                 triggerHaptic('success');
                 showToast('Referral Claimed!', '+10 AI tokens added via Ad verification.', 'success');
@@ -1455,19 +1498,6 @@
             }, () => {
                 showToast('Ad Required', 'Watch full ad to claim referral reward.', 'error');
             });
-        }
-
-        function simulateFriendJoin() {
-            const demoNames = [
-                { id: Math.floor(Math.random()*1000000), name: 'Liam Vance', username: 'liam_crypto' },
-                { id: Math.floor(Math.random()*1000000), name: 'Elena Rostova', username: 'elena_ton' }
-            ];
-            const pick = demoNames[appState.friends.length % demoNames.length];
-            appState.friends.unshift(pick);
-            triggerHaptic('success');
-            showToast('New Friend Joined!', 'Referral added to your squad.', 'success');
-            saveState();
-            updateAllUI();
         }
 
         function connectWallet() {
@@ -1517,11 +1547,12 @@
             const tgJoined = appState.completedTasks.includes('tg_channel');
             const isSecretClaimedToday = appState.dailyCodeClaimedDate === todayStr;
             const totalQuestsDone = (tgJoined ? 1 : 0) + (isSecretClaimedToday ? 1 : 0);
+            const totalFriends = (appState.referredCount || 0) + (Array.isArray(appState.friends) ? appState.friends.length : 0);
 
             const criteria = [
                 { label: '1. Connect Payout Wallet', sub: appState.walletAddress ? 'Verified' : 'TON or EVM required', passed: Boolean(appState.walletAddress) },
                 { label: '2. Complete 2 Quests (TG & Code)', sub: `${totalQuestsDone} / 2 completed`, passed: totalQuestsDone >= 2 },
-                { label: '3. Invite at least 1 Friend', sub: `Squad active`, passed: appState.friends.length > 0 },
+                { label: '3. Invite at least 1 Friend', sub: `${totalFriends} referred`, passed: totalFriends > 0 },
                 { label: '4. Active Check-in Streak', sub: appState.lastCheckInDate ? `Active (${appState.streakDay} day)` : 'Claim daily reward', passed: Boolean(appState.lastCheckInDate) },
                 { label: '5. Watch 30 Ads', sub: `${appState.adsWatchedTotal} / 30 ads watched`, passed: appState.adsWatchedTotal >= 30 }
             ];
