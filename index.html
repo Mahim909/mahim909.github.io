@@ -6,8 +6,8 @@
     <title>NEXUS PROTOCOL — Telegram Airdrop Mini App</title>
     <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- ADSBitvex Reward SDK (App ID: 000577) -->
-    <script src="https://sdk.adsbitvex.com/function?app_id=000577" data-app-id="000577" async></script>
+    <!-- ADSBitvex Reward SDK for Telegram Mini Apps (App ID: 000577) -->
+    <script src="https://sdk.adsbitvex.com/functions/v1/ad-script?appid=000577"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter & Space Grotesk -->
@@ -148,27 +148,6 @@
                 <p id="toast-title" class="text-xs font-bold text-white truncate">Notification</p>
                 <p id="toast-msg" class="text-[11px] text-slate-300 truncate">Action completed successfully.</p>
             </div>
-        </div>
-    </div>
-
-    <!-- Ad Overlay Modal -->
-    <div id="ad-overlay-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-        <div class="glass-card-glow w-full max-w-xs rounded-3xl p-6 text-center space-y-4 border border-cyan-400/40 relative">
-            <button onclick="skipOrCloseAd(false)" class="absolute top-3 right-3 w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-slate-300 hover:text-white text-xs" title="Close Ad">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-            <div class="absolute top-3 left-4 text-[10px] font-mono text-cyan-400/80">ID: 000577 (ADSBitvex)</div>
-            <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-400/20 to-purple-500/20 border border-cyan-400/40 text-cyan-300 flex items-center justify-center mx-auto text-2xl mt-2">
-                <i class="fa-solid fa-rectangle-ad fa-beat-fade"></i>
-            </div>
-            <div>
-                <h3 class="font-display text-base font-bold text-white">ADSBitvex Reward Ad</h3>
-                <p id="ad-overlay-sub" class="text-xs text-slate-400 mt-1">Watch full ad to unlock reward...</p>
-            </div>
-            <div class="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-white/10">
-                <div id="ad-progress-bar" class="h-full bg-gradient-to-r from-cyan-400 to-purple-500 transition-all duration-100" style="width: 0%"></div>
-            </div>
-            <p class="text-[11px] font-mono text-cyan-300">Please watch <span id="ad-countdown-sec">15</span>s...</p>
         </div>
     </div>
 
@@ -818,104 +797,41 @@
 
         const DAILY_REWARDS = [5, 5, 5, 5, 5, 5, 20];
 
-        // ADSBitvex Rewarded Ads Integration (App ID: 000577)
+        // ADSBitvex Rewarded Ads Integration (App ID: 000577)[span_4](start_span)[span_4](end_span)
         let isAdPlaying = false;
-        let currentAdCallback = null;
-        let currentAdDismissCallback = null;
-        let adCountdownInterval = null;
 
-        function closeAdModalUI() {
-            clearInterval(adCountdownInterval);
-            const modal = document.getElementById('ad-overlay-modal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            isAdPlaying = false;
-        }
-
-        function playSponsorAd(subtitle, onComplete, onDismiss) {
+        function playSponsorAd(_subtitle, onComplete, onDismiss) {
             if (isAdPlaying) return;
+
+            if (typeof window.showadsbitvex !== 'function') {
+                try {
+                    window.Telegram?.WebApp?.showAlert('Ad SDK not loaded. Check internet or ADSBitvex config.');
+                } catch (e) {}
+                showToast('Ad Unavailable', 'ADSBitvex SDK is not ready yet.', 'error');
+                if (typeof onDismiss === 'function') onDismiss();
+                return;
+            }
+
             isAdPlaying = true;
-            currentAdCallback = onComplete;
-            currentAdDismissCallback = onDismiss;
-
-            const modal = document.getElementById('ad-overlay-modal');
-            const subEl = document.getElementById('ad-overlay-sub');
-            const barEl = document.getElementById('ad-progress-bar');
-            const secEl = document.getElementById('ad-countdown-sec');
-
-            subEl.textContent = `${subtitle} • App ID: ${ADSBITVEX_APP_ID}`;
-            barEl.style.width = '0%';
-            secEl.textContent = '15';
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-
-            if (typeof window.showadsbitvex === 'function') {
-                window.showadsbitvex({ appId: ADSBITVEX_APP_ID })
-                    .then(() => {
-                        closeAdModalUI();
-                        appState.adsWatchedTotal += 1;
-                        saveState();
-                        if (typeof currentAdCallback === 'function') {
-                            const cb = currentAdCallback;
-                            currentAdCallback = null;
-                            currentAdDismissCallback = null;
-                            cb();
-                        }
-                    })
-                    .catch((error) => {
-                        console.warn('ADSBitvex error/closed:', error);
-                        closeAdModalUI();
-                        if (typeof currentAdDismissCallback === 'function') {
-                            const dismissCb = currentAdDismissCallback;
-                            currentAdCallback = null;
-                            currentAdDismissCallback = null;
-                            dismissCb();
-                        } else {
-                            currentAdCallback = null;
-                        }
-                    });
-            } else {
-                // Fallback timer if SDK script hasn't exposed window.showadsbitvex yet
-                let elapsed = 0;
-                const duration = 15000;
-                const interval = 100;
-                adCountdownInterval = setInterval(() => {
-                    if (!isAdPlaying) {
-                        clearInterval(adCountdownInterval);
-                        return;
+            window.showadsbitvex()
+                .then(() => {
+                    isAdPlaying = false;
+                    appState.adsWatchedTotal += 1;
+                    saveState();
+                    if (typeof onComplete === 'function') {
+                        onComplete();
                     }
-                    elapsed += interval;
-                    const pct = Math.min(100, (elapsed / duration) * 100);
-                    barEl.style.width = `${pct}%`;
-                    secEl.textContent = Math.max(1, Math.ceil((duration - elapsed) / 1000));
-
-                    if (elapsed >= duration) {
-                        closeAdModalUI();
-                        appState.adsWatchedTotal += 1;
-                        saveState();
-                        if (typeof currentAdCallback === 'function') {
-                            const cb = currentAdCallback;
-                            currentAdCallback = null;
-                            currentAdDismissCallback = null;
-                            cb();
-                        }
+                })
+                .catch((error) => {
+                    isAdPlaying = false;
+                    console.warn('ADSBitvex error or closed:', error);
+                    try {
+                        window.Telegram?.WebApp?.showAlert('No ads available right now.');
+                    } catch (e) {}
+                    if (typeof onDismiss === 'function') {
+                        onDismiss();
                     }
-                }, interval);
-            }
-        }
-
-        function skipOrCloseAd(completedSuccessfully) {
-            closeAdModalUI();
-
-            if (!completedSuccessfully) {
-                if (typeof currentAdDismissCallback === 'function') {
-                    currentAdDismissCallback();
-                } else {
-                    showToast('Ad Skipped', 'Reward cancelled because ad was closed before finishing.', 'error');
-                }
-            }
-            currentAdCallback = null;
-            currentAdDismissCallback = null;
+                });
         }
 
         function switchGameMode(mode) {
