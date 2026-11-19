@@ -6,6 +6,8 @@
     <title>NEXUS PROTOCOL — Telegram Airdrop Mini App</title>
     <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- ADSBitvex Reward SDK (App ID: 000577) -->
+    <script src="https://sdk.adsbitvex.com/function?app_id=000577" data-app-id="000577" async></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter & Space Grotesk -->
@@ -155,18 +157,18 @@
             <button onclick="skipOrCloseAd(false)" class="absolute top-3 right-3 w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-slate-300 hover:text-white text-xs" title="Close Ad">
                 <i class="fa-solid fa-xmark"></i>
             </button>
-            <div class="absolute top-3 left-4 text-[10px] font-mono text-cyan-400/80">ID: AdPulse24 (AdGram SDK)</div>
+            <div class="absolute top-3 left-4 text-[10px] font-mono text-cyan-400/80">ID: 000577 (ADSBitvex)</div>
             <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-400/20 to-purple-500/20 border border-cyan-400/40 text-cyan-300 flex items-center justify-center mx-auto text-2xl mt-2">
                 <i class="fa-solid fa-rectangle-ad fa-beat-fade"></i>
             </div>
             <div>
-                <h3 class="font-display text-base font-bold text-white">Sponsor Ad Playing</h3>
+                <h3 class="font-display text-base font-bold text-white">ADSBitvex Reward Ad</h3>
                 <p id="ad-overlay-sub" class="text-xs text-slate-400 mt-1">Watch full ad to unlock reward...</p>
             </div>
             <div class="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-white/10">
                 <div id="ad-progress-bar" class="h-full bg-gradient-to-r from-cyan-400 to-purple-500 transition-all duration-100" style="width: 0%"></div>
             </div>
-            <p class="text-[11px] font-mono text-cyan-300">Please watch <span id="ad-countdown-sec">3</span>s...</p>
+            <p class="text-[11px] font-mono text-cyan-300">Please watch <span id="ad-countdown-sec">15</span>s...</p>
         </div>
     </div>
 
@@ -472,6 +474,17 @@
 
         <!-- TAB 5: WALLET & AIRDROP -->
         <section id="tab-wallet" class="tab-section space-y-4">
+
+            <!-- Swapped USDT Balance Card -->
+            <div class="glass-card rounded-2xl p-3.5 border border-emerald-400/30 flex items-center justify-between">
+                <div>
+                    <span class="text-[10px] uppercase tracking-wider text-slate-400 block">USDT Balance</span>
+                    <span id="usdt-balance-display" class="text-2xl font-display font-extrabold text-emerald-300">0.00 USDT</span>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 flex items-center justify-center text-lg font-bold">
+                    ₮
+                </div>
+            </div>
             
             <!-- AI to USDT Swap Card -->
             <div class="glass-card-glow rounded-3xl p-4 relative overflow-hidden border border-emerald-400/30 space-y-3">
@@ -616,6 +629,7 @@
     <script>
         const FIREBASE_DB_URL = 'https://adsearn-6ef67-default-rtdb.firebaseio.com';
         const BASE_BOT_URL = 'https://t.me/AdPulse24_bot/AdPulse/app';
+        const ADSBITVEX_APP_ID = '000577';
 
         let appState = {
             points: 0,
@@ -804,10 +818,19 @@
 
         const DAILY_REWARDS = [5, 5, 5, 5, 5, 5, 20];
 
-        // Strict AdGram Integration SDK with OnComplete & OnDismiss/Close check
+        // ADSBitvex Rewarded Ads Integration (App ID: 000577)
         let isAdPlaying = false;
         let currentAdCallback = null;
         let currentAdDismissCallback = null;
+        let adCountdownInterval = null;
+
+        function closeAdModalUI() {
+            clearInterval(adCountdownInterval);
+            const modal = document.getElementById('ad-overlay-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            isAdPlaying = false;
+        }
 
         function playSponsorAd(subtitle, onComplete, onDismiss) {
             if (isAdPlaying) return;
@@ -820,48 +843,69 @@
             const barEl = document.getElementById('ad-progress-bar');
             const secEl = document.getElementById('ad-countdown-sec');
 
-            subEl.textContent = `${subtitle} (AdPulse SDK)`;
+            subEl.textContent = `${subtitle} • App ID: ${ADSBITVEX_APP_ID}`;
             barEl.style.width = '0%';
-            secEl.textContent = '3';
+            secEl.textContent = '15';
             modal.classList.remove('hidden');
             modal.classList.add('flex');
 
-            let elapsed = 0;
-            const duration = 3000; // 3 seconds ad duration
-            const interval = 100;
-
-            const timer = setInterval(() => {
-                if (!isAdPlaying) {
-                    clearInterval(timer);
-                    return;
-                }
-                elapsed += interval;
-                const pct = Math.min(100, (elapsed / duration) * 100);
-                barEl.style.width = `${pct}%`;
-                secEl.textContent = Math.max(1, Math.ceil((duration - elapsed) / 1000));
-
-                if (elapsed >= duration) {
-                    clearInterval(timer);
-                    modal.classList.add('hidden');
-                    modal.classList.remove('flex');
-                    isAdPlaying = false;
-                    appState.adsWatchedTotal += 1;
-                    saveState();
-                    if (typeof currentAdCallback === 'function') {
-                        const cb = currentAdCallback;
-                        currentAdCallback = null;
-                        currentAdDismissCallback = null;
-                        cb();
+            if (typeof window.showadsbitvex === 'function') {
+                window.showadsbitvex({ appId: ADSBITVEX_APP_ID })
+                    .then(() => {
+                        closeAdModalUI();
+                        appState.adsWatchedTotal += 1;
+                        saveState();
+                        if (typeof currentAdCallback === 'function') {
+                            const cb = currentAdCallback;
+                            currentAdCallback = null;
+                            currentAdDismissCallback = null;
+                            cb();
+                        }
+                    })
+                    .catch((error) => {
+                        console.warn('ADSBitvex error/closed:', error);
+                        closeAdModalUI();
+                        if (typeof currentAdDismissCallback === 'function') {
+                            const dismissCb = currentAdDismissCallback;
+                            currentAdCallback = null;
+                            currentAdDismissCallback = null;
+                            dismissCb();
+                        } else {
+                            currentAdCallback = null;
+                        }
+                    });
+            } else {
+                // Fallback timer if SDK script hasn't exposed window.showadsbitvex yet
+                let elapsed = 0;
+                const duration = 15000;
+                const interval = 100;
+                adCountdownInterval = setInterval(() => {
+                    if (!isAdPlaying) {
+                        clearInterval(adCountdownInterval);
+                        return;
                     }
-                }
-            }, interval);
+                    elapsed += interval;
+                    const pct = Math.min(100, (elapsed / duration) * 100);
+                    barEl.style.width = `${pct}%`;
+                    secEl.textContent = Math.max(1, Math.ceil((duration - elapsed) / 1000));
+
+                    if (elapsed >= duration) {
+                        closeAdModalUI();
+                        appState.adsWatchedTotal += 1;
+                        saveState();
+                        if (typeof currentAdCallback === 'function') {
+                            const cb = currentAdCallback;
+                            currentAdCallback = null;
+                            currentAdDismissCallback = null;
+                            cb();
+                        }
+                    }
+                }, interval);
+            }
         }
 
         function skipOrCloseAd(completedSuccessfully) {
-            const modal = document.getElementById('ad-overlay-modal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-            isAdPlaying = false;
+            closeAdModalUI();
 
             if (!completedSuccessfully) {
                 if (typeof currentAdDismissCallback === 'function') {
@@ -937,7 +981,7 @@
         function verifyQuizAnswer(selectedOpt) {
             if (selectedOpt === currentQuiz.answer) {
                 triggerHaptic('success');
-                document.getElementById('quiz-status').textContent = 'Correct! Loading Ad Pulse Ad...';
+                document.getElementById('quiz-status').textContent = 'Correct! Loading ADSBitvex Ad...';
                 
                 playSponsorAd('Playing Ad for Math Quiz Reward...', () => {
                     appState.quizWins += 1;
@@ -968,7 +1012,7 @@
 
             if (checkTttWin('X')) {
                 tttIsGameActive = false;
-                document.getElementById('ttt-status').textContent = 'You Won! Loading Ad Pulse Ad...';
+                document.getElementById('ttt-status').textContent = 'You Won! Loading ADSBitvex Ad...';
                 
                 playSponsorAd('Playing Ad for Tic-Tac-Toe Reward...', () => {
                     appState.tttWins += 1;
@@ -1127,6 +1171,7 @@
         function updateAllUI() {
             document.getElementById('balance-display').textContent = Math.floor(appState.points).toLocaleString();
             document.getElementById('max-ai-balance').textContent = `Bal: ${Math.floor(appState.points).toLocaleString()} AI`;
+            document.getElementById('usdt-balance-display').textContent = `${Number(appState.usdtBalance || 0).toFixed(2)} USDT`;
 
             const league = getLeagueInfo(appState.points);
             document.getElementById('rank-label').textContent = league.name;
