@@ -101,6 +101,24 @@
 </head>
 <body class="pb-24 antialiased selection:bg-sky-500/30">
 
+    <!-- Guard / Ban Lock Screen (Shown if opened outside Telegram or permanently banned) -->
+    <div id="access-guard-screen" class="fixed inset-0 z-[100] hidden items-center justify-center p-5 bg-[#060a14]/98 backdrop-blur-xl">
+        <div class="glass-card-glow max-w-sm w-full rounded-3xl p-6 text-center space-y-4 border border-rose-500/40">
+            <div id="guard-icon-box" class="w-14 h-14 rounded-2xl bg-rose-500/20 border border-rose-400/40 text-rose-400 flex items-center justify-center mx-auto text-2xl">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <h2 id="guard-title" class="font-display text-xl font-extrabold text-white">Access Restricted</h2>
+            <p id="guard-desc" class="text-xs text-slate-300 leading-relaxed">
+                This Mini App only runs inside Telegram.
+            </p>
+            <div class="bg-slate-950/80 border border-white/10 rounded-2xl p-3 text-left text-[11px] font-mono space-y-1 text-slate-400">
+                <div>Device ID: <span id="guard-device-id" class="text-sky-300">Checking...</span></div>
+                <div>IP Address: <span id="guard-ip-addr" class="text-emerald-300">Checking...</span></div>
+                <div>Status: <span id="guard-status-text" class="text-rose-400 font-bold">LOCKED</span></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast Notification Banner -->
     <div id="toast-banner" class="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-md pointer-events-none transition-all duration-300 opacity-0 -translate-y-4">
         <div class="glass-card-glow rounded-2xl px-4 py-3 flex items-center gap-3 shadow-2xl border border-sky-400/40">
@@ -265,13 +283,17 @@
                 </label>
             </div>
 
-            <!-- Node Stats & Streak Overview -->
-            <div class="glass-card rounded-2xl p-3.5">
+            <!-- Security & Node Stats Overview -->
+            <div class="glass-card rounded-2xl p-3.5 space-y-1.5">
                 <div class="flex items-center justify-between text-xs">
                     <span class="text-slate-400"><i class="fa-solid fa-chart-line text-emerald-400 mr-1.5"></i>Arena Wins: <strong id="home-total-wins" class="text-white">0</strong></span>
                     <button onclick="openDailyModal()" class="text-amber-300 font-semibold hover:underline flex items-center gap-1">
                         <i class="fa-solid fa-fire"></i> Streak: <span id="streak-count-mini">1</span> Days
                     </button>
+                </div>
+                <div class="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-1 border-t border-white/5">
+                    <span>DEV: <strong id="header-device-id" class="text-slate-300">---</strong></span>
+                    <span>IP: <strong id="header-ip-addr" class="text-slate-300">---</strong></span>
                 </div>
             </div>
         </section>
@@ -355,7 +377,7 @@
             <div class="glass-card-glow rounded-2xl p-4 space-y-3">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-bold text-slate-200">Your Referral Link</span>
-                    <span class="text-[10px] text-sky-300 font-mono">ID: <span id="ref-id-display">60523</span></span>
+                    <span class="text-[10px] text-sky-300 font-mono">ID: <span id="ref-id-display">---</span></span>
                 </div>
 
                 <div class="flex items-center gap-2 bg-slate-950/80 border border-white/10 rounded-xl p-2.5">
@@ -389,7 +411,6 @@
                 <p class="text-xs text-slate-400">Entry Fee: <strong class="text-amber-300">5 AI</strong> = <strong class="text-emerald-300">3 Matches</strong> | Win: <strong class="text-sky-300">+10 AI</strong></p>
             </div>
 
-            <!-- Entry Pass & Matches Left Banner -->
             <div class="glass-card rounded-2xl p-3.5 border border-amber-400/30 flex items-center justify-between gap-3">
                 <div>
                     <span class="text-[10px] uppercase tracking-wider text-slate-400 block">Arena Pass Status</span>
@@ -400,7 +421,6 @@
                 </button>
             </div>
 
-            <!-- Game Switcher Tabs -->
             <div class="grid grid-cols-2 gap-2">
                 <button onclick="switchGameMode('tictactoe')" id="mode-btn-ttt" class="py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-400 to-sky-500 text-slate-950 font-bold text-xs shadow-md transition">
                     <i class="fa-solid fa-gamepad mr-1"></i> Tic-Tac-Toe
@@ -461,7 +481,6 @@
         <!-- TAB 5: WALLET, PAYOUT PROOF & AIRDROP ($100 MIN WITHDRAW) -->
         <section id="tab-wallet" class="tab-section space-y-4">
 
-            <!-- Swapped USDT Balance Card -->
             <div class="glass-card rounded-2xl p-3.5 border border-emerald-400/30 flex items-center justify-between">
                 <div>
                     <span class="text-[10px] uppercase tracking-wider text-slate-400 block">USDT Balance (Min $100.00 to Withdraw)</span>
@@ -545,7 +564,7 @@
                 </div>
             </div>
 
-            <!-- Payout Confirmation Log (Policy Clause 8 Support) -->
+            <!-- Payout Confirmation Log -->
             <div class="glass-card rounded-2xl p-4 space-y-2.5">
                 <div class="flex items-center justify-between">
                     <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Payout Confirmation Log</h3>
@@ -641,7 +660,16 @@
         const GAME_ENTRY_FEE = 5;
         const GAME_PASS_MATCHES = 3;
 
+        let isTelegramVerified = false;
+        let isAccountBanned = false;
+        let currentDeviceId = '';
+        let currentIpAddress = '';
+
         let appState = {
+            banned: false,
+            banReason: '',
+            deviceId: '',
+            ipAddress: '',
             points: 0,
             usdtBalance: 0,
             autoMineStartTime: Date.now(),
@@ -666,11 +694,70 @@
         };
 
         let tgUser = {
-            id: 8691107318,
+            id: null,
             firstName: 'AdPulse Node',
-            username: 'adpulse_user',
+            username: '',
             isPremium: false
         };
+
+        function showAccessLock(title, desc, statusText = 'BLOCKED') {
+            const screen = document.getElementById('access-guard-screen');
+            document.getElementById('guard-title').textContent = title;
+            document.getElementById('guard-desc').textContent = desc;
+            document.getElementById('guard-device-id').textContent = currentDeviceId || 'Unavailable';
+            document.getElementById('guard-ip-addr').textContent = currentIpAddress || 'Unavailable';
+            document.getElementById('guard-status-text').textContent = statusText;
+            screen.classList.remove('hidden');
+            screen.classList.add('flex');
+        }
+
+        async function computeDeviceFingerprint() {
+            const parts = [
+                navigator.userAgent || '',
+                navigator.language || '',
+                navigator.platform || '',
+                String(screen.width || 0),
+                String(screen.height || 0),
+                String(screen.colorDepth || 0),
+                String(new Date().getTimezoneOffset()),
+                String(navigator.hardwareConcurrency || 0),
+                String(navigator.deviceMemory || 0)
+            ];
+
+            let localKey = '';
+            try {
+                localKey = localStorage.getItem('adpulse_node_dev_salt') || '';
+                if (!localKey) {
+                    localKey = Math.random().toString(36).slice(2, 12);
+                    localStorage.setItem('adpulse_node_dev_salt', localKey);
+                }
+            } catch (e) {}
+
+            const raw = `${parts.join('|')}|${localKey}`;
+            if (window.crypto?.subtle) {
+                const msgBuffer = new TextEncoder().encode(raw);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                return 'DEV_' + hashArray.map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16).toUpperCase();
+            }
+
+            let hash = 0;
+            for (let i = 0; i < raw.length; i++) {
+                hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+                hash |= 0;
+            }
+            return 'DEV_' + Math.abs(hash).toString(16).toUpperCase();
+        }
+
+        async function fetchPublicIp() {
+            try {
+                const res = await fetch('https://api.ipify.org?format=json');
+                const data = await res.json();
+                return data?.ip ? String(data.ip).trim() : 'UNKNOWN_IP';
+            } catch (e) {
+                return 'UNKNOWN_IP';
+            }
+        }
 
         function syncDailyAdCounter() {
             const todayStr = new Date().toDateString();
@@ -681,6 +768,7 @@
         }
 
         function setStrategyMode(mode) {
+            if (!isTelegramVerified || isAccountBanned) return;
             const profiles = {
                 balanced: { label: 'Balanced Node', eff: 75 },
                 tactical: { label: 'Tactical Arena', eff: 84 },
@@ -696,6 +784,7 @@
         }
 
         function runStrategyCheck() {
+            if (!isTelegramVerified || isAccountBanned) return;
             const bonusEff = Math.min(96, (appState.strategyEfficiency || 75) + 2);
             appState.strategyEfficiency = bonusEff;
             triggerHaptic('success');
@@ -726,6 +815,7 @@
         }
 
         function toggleAdConsent() {
+            if (!isTelegramVerified || isAccountBanned) return;
             const cb = document.getElementById('ad-consent-checkbox');
             appState.adConsent = Boolean(cb.checked);
             saveState();
@@ -752,29 +842,44 @@
             return null;
         }
 
-        function initTelegramSDK() {
+        async function initSecurityAndTelegram() {
+            currentDeviceId = await computeDeviceFingerprint();
+            currentIpAddress = await fetchPublicIp();
+
+            document.getElementById('header-device-id').textContent = currentDeviceId;
+            document.getElementById('header-ip-addr').textContent = currentIpAddress;
+
             let startParam = null;
             try {
-                if (window.Telegram && window.Telegram.WebApp) {
-                    const tg = window.Telegram.WebApp;
+                const tg = window.Telegram?.WebApp;
+                const u = tg?.initDataUnsafe?.user;
+                const initDataStr = tg?.initData || '';
+
+                if (tg && u && u.id && (initDataStr.length > 0 || tg.platform !== 'unknown')) {
                     tg.ready();
                     tg.expand();
                     if (tg.setHeaderColor) tg.setHeaderColor('#060a14');
                     if (tg.setBackgroundColor) tg.setBackgroundColor('#060a14');
-                    
-                    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-                        const u = tg.initDataUnsafe.user;
-                        tgUser.id = u.id || 8691107318;
-                        tgUser.firstName = [u.first_name, u.last_name].filter(Boolean).join(' ') || 'AdPulse Node';
-                        tgUser.username = u.username || `user_${tgUser.id}`;
-                        tgUser.isPremium = Boolean(u.is_premium);
-                    }
+
+                    tgUser.id = Number(u.id);
+                    tgUser.firstName = [u.first_name, u.last_name].filter(Boolean).join(' ') || 'AdPulse Node';
+                    tgUser.username = u.username || `user_${tgUser.id}`;
+                    tgUser.isPremium = Boolean(u.is_premium);
+                    isTelegramVerified = true;
+                    startParam = extractStartParam();
                 }
             } catch (err) {
-                console.warn('Not inside Telegram WebApp environment.');
+                isTelegramVerified = false;
             }
 
-            startParam = extractStartParam();
+            if (!isTelegramVerified || !tgUser.id) {
+                showAccessLock(
+                    'Telegram Only Access',
+                    'Browser access is disabled. Open this Mini App directly inside Telegram.',
+                    'BROWSER BLOCKED'
+                );
+                return;
+            }
 
             document.getElementById('user-name').textContent = tgUser.firstName;
             document.getElementById('user-handle').textContent = tgUser.username ? `@${tgUser.username}` : `ID: ${tgUser.id}`;
@@ -789,21 +894,111 @@
             document.getElementById('ref-id-display').textContent = tgUser.id;
             document.getElementById('referral-link-input').value = refLink;
 
-            loadUserDataFromFirebase(startParam);
+            await verifyDeviceAndIpAndLoadUser(startParam);
         }
 
-        async function loadUserDataFromFirebase(startParam) {
+        async function permanentlyBanAccount(reason) {
+            isAccountBanned = true;
+            appState.banned = true;
+            appState.banReason = reason;
+            appState.deviceId = currentDeviceId;
+            appState.ipAddress = currentIpAddress;
+
             try {
-                const res = await fetch(`${FIREBASE_DB_URL}/users/${tgUser.id}.json`);
-                const data = await res.json();
-                
-                if (data) {
-                    appState = { ...appState, ...data };
+                await fetch(`${FIREBASE_DB_URL}/bannedUsers/${tgUser.id}.json`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        telegramId: tgUser.id,
+                        username: tgUser.username,
+                        deviceId: currentDeviceId,
+                        ipAddress: currentIpAddress,
+                        reason,
+                        bannedAt: new Date().toISOString()
+                    })
+                });
+
+                await fetch(`${FIREBASE_DB_URL}/bannedDevices/${currentDeviceId}.json`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        deviceId: currentDeviceId,
+                        telegramId: tgUser.id,
+                        ipAddress: currentIpAddress,
+                        reason,
+                        bannedAt: new Date().toISOString()
+                    })
+                });
+
+                await saveUserDataToFirebase();
+            } catch (e) {
+                console.error('Ban sync error:', e);
+            }
+
+            showAccessLock(
+                'Account Permanently Banned',
+                `Multi-account violation detected (${reason}). Creating multiple IDs from the same device is strictly prohibited.`,
+                'PERMANENT BAN'
+            );
+        }
+
+        async function verifyDeviceAndIpAndLoadUser(startParam) {
+            try {
+                // 1. Check if this Telegram ID or Device ID is already permanently banned
+                const [banUserRes, banDevRes, userRes, allUsersRes] = await Promise.all([
+                    fetch(`${FIREBASE_DB_URL}/bannedUsers/${tgUser.id}.json`),
+                    fetch(`${FIREBASE_DB_URL}/bannedDevices/${currentDeviceId}.json`),
+                    fetch(`${FIREBASE_DB_URL}/users/${tgUser.id}.json`),
+                    fetch(`${FIREBASE_DB_URL}/users.json`)
+                ]);
+
+                const banUserData = await banUserRes.json();
+                const banDevData = await banDevRes.json();
+                const existingUserData = await userRes.json();
+                const allUsersData = await allUsersRes.json();
+
+                if (banUserData || banDevData || existingUserData?.banned) {
+                    await permanentlyBanAccount(banUserData?.reason || banDevData?.reason || existingUserData?.banReason || 'Duplicate Device ID');
+                    return;
+                }
+
+                // 2. Check if another Telegram ID already exists on the same Device ID
+                let anotherIdOnSameDevice = false;
+                let anotherIdOnSameIp = false;
+
+                if (allUsersData && typeof allUsersData === 'object') {
+                    for (const [uid, uData] of Object.entries(allUsersData)) {
+                        if (String(uid) !== String(tgUser.id) && uData) {
+                            if (uData.deviceId && uData.deviceId === currentDeviceId) {
+                                anotherIdOnSameDevice = true;
+                            }
+                            if (currentIpAddress && currentIpAddress !== 'UNKNOWN_IP' && uData.ipAddress === currentIpAddress) {
+                                anotherIdOnSameIp = true;
+                            }
+                        }
+                    }
+                }
+
+                if (anotherIdOnSameDevice) {
+                    await permanentlyBanAccount('Same Device ID used by another account');
+                    return;
+                }
+
+                if (!existingUserData && anotherIdOnSameIp) {
+                    await permanentlyBanAccount('New ID created from an already active IP address');
+                    return;
+                }
+
+                if (existingUserData) {
+                    appState = { ...appState, ...existingUserData };
                     if (!Array.isArray(appState.friends)) appState.friends = [];
                     if (!appState.autoMineStartTime) appState.autoMineStartTime = Date.now();
                     if (typeof appState.matchesLeft !== 'number') appState.matchesLeft = 0;
                     if (typeof appState.adConsent !== 'boolean') appState.adConsent = true;
+                    appState.deviceId = currentDeviceId;
+                    appState.ipAddress = currentIpAddress;
                     syncDailyAdCounter();
+
                     if (!appState.referredBy && startParam && startParam !== String(tgUser.id)) {
                         appState.referredBy = startParam;
                         await addReferralToOwner(startParam, tgUser);
@@ -811,6 +1006,8 @@
                     await saveUserDataToFirebase();
                 } else {
                     appState.autoMineStartTime = Date.now();
+                    appState.deviceId = currentDeviceId;
+                    appState.ipAddress = currentIpAddress;
                     syncDailyAdCounter();
                     if (startParam && startParam !== String(tgUser.id)) {
                         appState.referredBy = startParam;
@@ -820,12 +1017,16 @@
                     await saveUserDataToFirebase();
                 }
             } catch (e) {
-                console.error('Firebase load error:', e);
+                console.error('Security/Firebase verification error:', e);
             }
-            updateAllUI();
+
+            if (!isAccountBanned) {
+                updateAllUI();
+            }
         }
 
         async function refreshReferrals() {
+            if (!isTelegramVerified || isAccountBanned) return;
             triggerHaptic('light');
             try {
                 const res = await fetch(`${FIREBASE_DB_URL}/users/${tgUser.id}.json`);
@@ -870,6 +1071,7 @@
         }
 
         async function saveUserDataToFirebase() {
+            if (!tgUser.id) return;
             try {
                 await fetch(`${FIREBASE_DB_URL}/users/${tgUser.id}.json`, {
                     method: 'PUT',
@@ -882,6 +1084,7 @@
         }
 
         async function saveState() {
+            if (!isTelegramVerified || isAccountBanned) return;
             await saveUserDataToFirebase();
         }
 
@@ -922,6 +1125,7 @@
         }
 
         function claimAutoMiningReward() {
+            if (!isTelegramVerified || isAccountBanned) return;
             const startTime = Number(appState.autoMineStartTime) || Date.now();
             const elapsed = Date.now() - startTime;
             if (elapsed < AUTO_MINE_DURATION_MS) {
@@ -953,6 +1157,7 @@
         let isAdPlaying = false;
 
         function playSponsorAd(_subtitle, onComplete, onDismiss) {
+            if (!isTelegramVerified || isAccountBanned) return;
             syncDailyAdCounter();
 
             if (!appState.adConsent) {
@@ -1005,6 +1210,7 @@
         }
 
         function buyGameEntryPass() {
+            if (!isTelegramVerified || isAccountBanned) return;
             if (appState.matchesLeft > 0) {
                 triggerHaptic('light');
                 showToast('Pass Active', `You still have ${appState.matchesLeft} match(es) left.`, 'info');
@@ -1118,6 +1324,7 @@
         }
 
         function verifyQuizAnswer(selectedOpt) {
+            if (!isTelegramVerified || isAccountBanned) return;
             if (appState.matchesLeft <= 0) {
                 triggerHaptic('warning');
                 showToast('Entry Required', 'Pay 5 AI tokens to unlock 3 matches.', 'warning');
@@ -1144,6 +1351,7 @@
         }
 
         function makeTttMove(index) {
+            if (!isTelegramVerified || isAccountBanned) return;
             if (appState.matchesLeft <= 0) {
                 triggerHaptic('warning');
                 showToast('Entry Required', 'Pay 5 AI tokens to unlock 3 matches.', 'warning');
@@ -1263,6 +1471,7 @@
         }
 
         function resetTicTacToe() {
+            if (!isTelegramVerified || isAccountBanned) return;
             if (appState.matchesLeft <= 0) {
                 triggerHaptic('warning');
                 showToast('No Matches Left', 'Pay 5 AI tokens to start 3 matches.', 'warning');
@@ -1316,6 +1525,7 @@
         }
 
         function updateAllUI() {
+            if (!isTelegramVerified || isAccountBanned) return;
             syncDailyAdCounter();
             document.getElementById('balance-display').textContent = Math.floor(appState.points).toLocaleString();
             document.getElementById('max-ai-balance').textContent = `Bal: ${Math.floor(appState.points).toLocaleString()} AI`;
@@ -1383,6 +1593,7 @@
         }
 
         function watchRewardAd() {
+            if (!isTelegramVerified || isAccountBanned) return;
             syncDailyAdCounter();
             if (!appState.adConsent) {
                 triggerHaptic('warning');
@@ -1407,6 +1618,7 @@
         }
 
         function verifyDailyCode() {
+            if (!isTelegramVerified || isAccountBanned) return;
             const todayStr = new Date().toDateString();
             if (appState.dailyCodeClaimedDate === todayStr) return;
 
@@ -1438,6 +1650,7 @@
         }
 
         function executeSwap() {
+            if (!isTelegramVerified || isAccountBanned) return;
             const val = parseFloat(document.getElementById('swap-ai-input').value) || 0;
             if (val <= 0 || val > appState.points) {
                 triggerHaptic('error');
@@ -1456,11 +1669,13 @@
         }
 
         setInterval(() => {
+            if (!isTelegramVerified || isAccountBanned) return;
             updateAutoMiningUI();
             updateSecretCountdown();
         }, 1000);
 
         function openDailyModal() {
+            if (!isTelegramVerified || isAccountBanned) return;
             triggerHaptic('light');
             const modal = document.getElementById('daily-modal');
             const grid = document.getElementById('daily-grid');
@@ -1507,6 +1722,7 @@
         }
 
         function claimDailyReward() {
+            if (!isTelegramVerified || isAccountBanned) return;
             const todayStr = new Date().toDateString();
             if (appState.lastCheckInDate === todayStr) return;
             triggerHaptic('light');
@@ -1563,6 +1779,7 @@
         }
 
         function startTask(taskId, url) {
+            if (!isTelegramVerified || isAccountBanned) return;
             triggerHaptic('light');
             try {
                 if (window.Telegram?.WebApp?.openLink) window.Telegram.WebApp.openLink(url);
@@ -1577,6 +1794,7 @@
         }
 
         function claimTask(taskId, reward) {
+            if (!isTelegramVerified || isAccountBanned) return;
             if (appState.completedTasks.includes(taskId)) return;
 
             appState.completedTasks.push(taskId);
@@ -1590,6 +1808,7 @@
         }
 
         function copyReferralLink() {
+            if (!isTelegramVerified || isAccountBanned) return;
             const input = document.getElementById('referral-link-input');
             input.select();
             input.setSelectionRange(0, 99999);
@@ -1601,6 +1820,7 @@
         }
 
         function shareOnTelegram() {
+            if (!isTelegramVerified || isAccountBanned) return;
             triggerHaptic('medium');
             const refLink = document.getElementById('referral-link-input').value;
             const shareText = encodeURIComponent('Join AdPulse Strategy & Node Mini App & claim your +10 AI welcome bonus!');
@@ -1648,6 +1868,7 @@
         }
 
         function claimRefReward(index) {
+            if (!isTelegramVerified || isAccountBanned) return;
             if (!Array.isArray(appState.friends) || !appState.friends[index]) return;
             appState.points += 10;
             appState.referredCount = (appState.referredCount || 0) + 1;
@@ -1659,6 +1880,7 @@
         }
 
         function connectWallet() {
+            if (!isTelegramVerified || isAccountBanned) return;
             const addr = document.getElementById('wallet-address-input').value.trim();
             const isTON = /^(UQ|EQ)[A-Za-z0-9_-]{40,52}$/.test(addr);
             const isEVM = /^0x[a-fA-F0-9]{40}$/.test(addr);
@@ -1676,6 +1898,7 @@
         }
 
         function disconnectWallet() {
+            if (!isTelegramVerified || isAccountBanned) return;
             appState.walletAddress = '';
             document.getElementById('wallet-address-input').value = '';
             triggerHaptic('light');
@@ -1751,6 +1974,7 @@
         }
 
         async function requestWithdrawal() {
+            if (!isTelegramVerified || isAccountBanned) return;
             const currentUsdt = Number(appState.usdtBalance || 0);
             if (currentUsdt < MIN_WITHDRAW_USDT) {
                 triggerHaptic('error');
@@ -1765,6 +1989,8 @@
                     name: tgUser.firstName,
                     username: tgUser.username,
                     wallet: appState.walletAddress,
+                    deviceId: currentDeviceId,
+                    ipAddress: currentIpAddress,
                     points: appState.points,
                     usdt: currentUsdt,
                     timestamp: new Date().toISOString()
@@ -1783,6 +2009,7 @@
         }
 
         function switchTab(tabName) {
+            if (!isTelegramVerified || isAccountBanned) return;
             triggerHaptic('light');
             document.querySelectorAll('.tab-section').forEach(sec => sec.classList.remove('active'));
             document.getElementById(`tab-${tabName}`).classList.add('active');
@@ -1823,11 +2050,13 @@
             }, 2800);
         }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            initTelegramSDK();
-            updateAutoMiningUI();
-            updateSecretCountdown();
-            loadNewQuizQuestion();
+        window.addEventListener('DOMContentLoaded', async () => {
+            await initSecurityAndTelegram();
+            if (isTelegramVerified && !isAccountBanned) {
+                updateAutoMiningUI();
+                updateSecretCountdown();
+                loadNewQuizQuestion();
+            }
         });
     </script>
 </body>
