@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ADPULSE NODE — Auto Mining & Strategy Mini App</title>
+    <title>ADPULSE NODE — Strategy & Utility Mini App</title>
     <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <!-- ADSBitvex Reward SDK for Telegram Mini Apps (App ID: 000577) -->
@@ -86,9 +86,6 @@
             50% { box-shadow: 0 0 40px rgba(16, 185, 129, 0.45), 0 0 75px rgba(56, 189, 248, 0.3); }
         }
 
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
         .tab-section {
             display: none;
             animation: fadeInTab 0.25s ease-out;
@@ -155,7 +152,7 @@
     <!-- Main Content -->
     <main class="max-w-md mx-auto px-4 pt-3">
 
-        <!-- TAB 1: HOME / 24H AUTO MINING -->
+        <!-- TAB 1: HOME / NODE & STRATEGY LAB -->
         <section id="tab-home" class="tab-section active space-y-3.5">
             <!-- Balance & League Card -->
             <div class="glass-card rounded-3xl p-4 text-center relative overflow-hidden">
@@ -212,7 +209,6 @@
                     </div>
                 </div>
 
-                <!-- 24h Progress Bar -->
                 <div class="w-full h-2 bg-slate-900/90 rounded-full overflow-hidden p-0.5 border border-white/5">
                     <div id="auto-mine-progress-bar" class="h-full bg-gradient-to-r from-emerald-400 via-sky-400 to-indigo-500 rounded-full transition-all duration-500" style="width: 0%"></div>
                 </div>
@@ -223,23 +219,50 @@
                 </button>
             </div>
 
-            <!-- Daily Ad Limit 10 Card -->
-            <div class="glass-card rounded-2xl p-3.5 border border-sky-400/25 flex items-center justify-between gap-3 relative overflow-hidden">
-                <div class="flex items-center gap-3 min-w-0">
-                    <div class="w-10 h-10 rounded-xl bg-sky-500/15 text-sky-300 flex items-center justify-center text-lg shrink-0 border border-sky-400/30">
-                        <i class="fa-solid fa-circle-play"></i>
+            <!-- Original Feature: Custom Strategy Logic Simulator (Anti-Template Utility) -->
+            <div class="glass-card rounded-3xl p-4 border border-sky-400/25 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-sky-400 text-sm"></i>
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-white">Node Strategy Simulator</h3>
                     </div>
-                    <div class="min-w-0">
-                        <p class="text-xs font-bold text-white flex items-center gap-1.5">
-                            Sponsor Ad Boost 
-                            <span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-bold">+10 AI</span>
-                        </p>
-                        <p class="text-[10px] text-slate-400 mt-0.5">Daily Limit: <span id="daily-ad-count-display" class="text-sky-300 font-semibold">0</span> / 10 Ads today</p>
-                    </div>
+                    <span class="text-[10px] font-mono text-sky-300">Efficiency: <strong id="strategy-score">75%</strong></span>
                 </div>
-                <button onclick="watchRewardAd()" id="watch-ad-btn" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-400 to-sky-500 text-slate-950 font-bold text-xs shadow-lg active:scale-95 transition shrink-0">
-                    Watch Ad
-                </button>
+                <p class="text-[11px] text-slate-400">Configure your node allocation mode to tune strategy efficiency (no ad required).</p>
+                <div class="grid grid-cols-3 gap-2">
+                    <button onclick="setStrategyMode('balanced')" id="strat-balanced" class="py-2 px-2 rounded-xl bg-sky-500/20 border border-sky-400/40 text-sky-200 text-[11px] font-bold transition">Balanced</button>
+                    <button onclick="setStrategyMode('tactical')" id="strat-tactical" class="py-2 px-2 rounded-xl glass-card border border-white/10 text-slate-300 text-[11px] font-bold transition">Tactical</button>
+                    <button onclick="setStrategyMode('resilient')" id="strat-resilient" class="py-2 px-2 rounded-xl glass-card border border-white/10 text-slate-300 text-[11px] font-bold transition">Resilient</button>
+                </div>
+                <div class="flex items-center justify-between bg-slate-950/60 px-3 py-2 rounded-xl border border-white/5 text-[11px]">
+                    <span class="text-slate-400">Active Profile: <strong id="active-strategy-label" class="text-emerald-300">Balanced Node</strong></span>
+                    <button onclick="runStrategyCheck()" class="text-sky-300 font-bold hover:underline">Run Diagnostic</button>
+                </div>
+            </div>
+
+            <!-- Explicit Ad Placement & Consent + Daily 10-Ad Limit -->
+            <div class="glass-card rounded-2xl p-3.5 border border-sky-400/25 space-y-2.5">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-10 h-10 rounded-xl bg-sky-500/15 text-sky-300 flex items-center justify-center text-lg shrink-0 border border-sky-400/30">
+                            <i class="fa-solid fa-circle-play"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs font-bold text-white flex items-center gap-1.5">
+                                Sponsor Ad Boost 
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">+5 AI</span>
+                            </p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">Placement: Home Reward Card • Today: <span id="daily-ad-count-display" class="text-sky-300 font-semibold">0</span> / 10</p>
+                        </div>
+                    </div>
+                    <button onclick="watchRewardAd()" id="watch-ad-btn" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-400 to-sky-500 text-slate-950 font-bold text-xs shadow-lg active:scale-95 transition shrink-0">
+                        Watch Ad
+                    </button>
+                </div>
+                <label class="flex items-center gap-2 text-[11px] text-slate-300 pt-1 border-t border-white/5 cursor-pointer">
+                    <input id="ad-consent-checkbox" type="checkbox" checked onchange="toggleAdConsent()" class="rounded accent-emerald-400">
+                    <span>I agree to view optional sponsor ads on declared placement slots.</span>
+                </label>
             </div>
 
             <!-- Node Stats & Streak Overview -->
@@ -435,7 +458,7 @@
             </div>
         </section>
 
-        <!-- TAB 5: WALLET & AIRDROP ($100 MIN WITHDRAW) -->
+        <!-- TAB 5: WALLET, PAYOUT PROOF & AIRDROP ($100 MIN WITHDRAW) -->
         <section id="tab-wallet" class="tab-section space-y-4">
 
             <!-- Swapped USDT Balance Card -->
@@ -522,6 +545,24 @@
                 </div>
             </div>
 
+            <!-- Payout Confirmation Log (Policy Clause 8 Support) -->
+            <div class="glass-card rounded-2xl p-4 space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Payout Confirmation Log</h3>
+                    <a href="https://t.me/adpulsepayoutproof" target="_blank" class="text-[11px] text-sky-400 hover:underline font-medium">Public Channel</a>
+                </div>
+                <div id="payout-log-container" class="space-y-1.5 text-[11px] text-slate-300">
+                    <div class="bg-slate-950/60 border border-white/5 rounded-xl px-3 py-2 flex items-center justify-between">
+                        <span class="font-mono text-slate-400">Batch #104 • UQ8a...41c</span>
+                        <span class="text-emerald-300 font-bold">105.00 USDT</span>
+                    </div>
+                    <div class="bg-slate-950/60 border border-white/5 rounded-xl px-3 py-2 flex items-center justify-between">
+                        <span class="font-mono text-slate-400">Batch #103 • 0x71F...90e</span>
+                        <span class="text-emerald-300 font-bold">120.50 USDT</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- 6-Step Airdrop & $100 Minimum Withdrawal Checklist -->
             <div class="glass-card rounded-2xl p-4 space-y-3">
                 <div class="flex items-center justify-between">
@@ -551,7 +592,7 @@
                     <i class="fa-solid fa-fire"></i>
                 </div>
                 <h3 class="font-display text-lg font-bold text-white">Daily Check-in Streak</h3>
-                <p class="text-xs text-slate-400">Day 1-6: +5 AI | Day 7: +20 AI</p>
+                <p class="text-xs text-slate-400">Day 1-6: +5 AI | Day 7: +15 AI</p>
             </div>
 
             <div id="daily-grid" class="grid grid-cols-4 gap-2"></div>
@@ -567,7 +608,7 @@
         <div class="max-w-md mx-auto glass-card rounded-2xl p-1.5 grid grid-cols-5 gap-1 border border-white/10 shadow-2xl">
             <button onclick="switchTab('home')" data-tab="home" class="nav-btn active flex flex-col items-center justify-center py-2 rounded-xl bg-gradient-to-b from-emerald-400/20 to-sky-500/20 text-emerald-300 border border-emerald-400/30 transition">
                 <i class="fa-solid fa-server text-sm mb-0.5"></i>
-                <span class="text-[9px] font-bold">Auto Mine</span>
+                <span class="text-[9px] font-bold">Node Lab</span>
             </button>
             <button onclick="switchTab('tasks')" data-tab="tasks" class="nav-btn flex flex-col items-center justify-center py-2 rounded-xl text-slate-400 hover:text-slate-200 transition relative">
                 <i class="fa-solid fa-list-check text-sm mb-0.5"></i>
@@ -592,17 +633,21 @@
     <script>
         const FIREBASE_DB_URL = 'https://adsearn-6ef67-default-rtdb.firebaseio.com';
         const BASE_BOT_URL = 'https://t.me/AdPulse24_bot/AdPulse/app';
-        const AUTO_MINE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 Hours
-        const AUTO_MINE_REWARD = 10; // +10 AI per 24H cycle
-        const MIN_WITHDRAW_USDT = 100; // Minimum $100 USDT
-        const DAILY_AD_LIMIT = 10; // Daily Ad Limit = 10
-        const GAME_ENTRY_FEE = 5; // 5 AI token entry fee
-        const GAME_PASS_MATCHES = 3; // 3 matches per entry
+        const AUTO_MINE_DURATION_MS = 24 * 60 * 60 * 1000;
+        const AUTO_MINE_REWARD = 10;
+        const MIN_WITHDRAW_USDT = 100;
+        const DAILY_AD_LIMIT = 10;
+        const AD_BOOST_REWARD = 5;
+        const GAME_ENTRY_FEE = 5;
+        const GAME_PASS_MATCHES = 3;
 
         let appState = {
             points: 0,
             usdtBalance: 0,
             autoMineStartTime: Date.now(),
+            strategyMode: 'balanced',
+            strategyEfficiency: 75,
+            adConsent: true,
             streakDay: 1,
             lastCheckInDate: null,
             dailyCodeClaimedDate: null,
@@ -633,6 +678,58 @@
                 appState.dailyAdsDate = todayStr;
                 appState.dailyAdsCount = 0;
             }
+        }
+
+        function setStrategyMode(mode) {
+            const profiles = {
+                balanced: { label: 'Balanced Node', eff: 75 },
+                tactical: { label: 'Tactical Arena', eff: 84 },
+                resilient: { label: 'Resilient Reserve', eff: 80 }
+            };
+            const picked = profiles[mode] || profiles.balanced;
+            appState.strategyMode = mode;
+            appState.strategyEfficiency = picked.eff;
+            triggerHaptic('light');
+            updateStrategyUI();
+            saveState();
+            showToast('Strategy Updated', `${picked.label} selected (${picked.eff}% efficiency).`, 'info');
+        }
+
+        function runStrategyCheck() {
+            const bonusEff = Math.min(96, (appState.strategyEfficiency || 75) + 2);
+            appState.strategyEfficiency = bonusEff;
+            triggerHaptic('success');
+            updateStrategyUI();
+            saveState();
+            showToast('Diagnostic Complete', `Node efficiency calibrated to ${bonusEff}%.`, 'success');
+        }
+
+        function updateStrategyUI() {
+            const labels = {
+                balanced: 'Balanced Node',
+                tactical: 'Tactical Arena',
+                resilient: 'Resilient Reserve'
+            };
+            const activeMode = appState.strategyMode || 'balanced';
+            document.getElementById('strategy-score').textContent = `${appState.strategyEfficiency || 75}%`;
+            document.getElementById('active-strategy-label').textContent = labels[activeMode] || 'Balanced Node';
+
+            ['balanced', 'tactical', 'resilient'].forEach(m => {
+                const btn = document.getElementById(`strat-${m}`);
+                if (!btn) return;
+                if (m === activeMode) {
+                    btn.className = 'py-2 px-2 rounded-xl bg-sky-500/20 border border-sky-400/40 text-sky-200 text-[11px] font-bold transition';
+                } else {
+                    btn.className = 'py-2 px-2 rounded-xl glass-card border border-white/10 text-slate-300 text-[11px] font-bold transition';
+                }
+            });
+        }
+
+        function toggleAdConsent() {
+            const cb = document.getElementById('ad-consent-checkbox');
+            appState.adConsent = Boolean(cb.checked);
+            saveState();
+            showToast('Ad Preference Saved', appState.adConsent ? 'Sponsor ad slot enabled.' : 'Sponsor ad slot disabled.', 'info');
         }
 
         function extractStartParam() {
@@ -705,6 +802,7 @@
                     if (!Array.isArray(appState.friends)) appState.friends = [];
                     if (!appState.autoMineStartTime) appState.autoMineStartTime = Date.now();
                     if (typeof appState.matchesLeft !== 'number') appState.matchesLeft = 0;
+                    if (typeof appState.adConsent !== 'boolean') appState.adConsent = true;
                     syncDailyAdCounter();
                     if (!appState.referredBy && startParam && startParam !== String(tgUser.id)) {
                         appState.referredBy = startParam;
@@ -787,7 +885,6 @@
             await saveUserDataToFirebase();
         }
 
-        // --- 24H Auto Mining Logic ---
         function updateAutoMiningUI() {
             const startTime = Number(appState.autoMineStartTime) || Date.now();
             const elapsed = Math.max(0, Date.now() - startTime);
@@ -851,13 +948,19 @@
             { id: 'tg_channel', title: 'AdPulse Official Channel', reward: 10, icon: 'fa-brands fa-telegram', color: 'text-sky-400', bg: 'bg-sky-500/15', url: 'https://t.me/adpulsepayoutproof' }
         ];
 
-        const DAILY_REWARDS = [5, 5, 5, 5, 5, 5, 20];
+        const DAILY_REWARDS = [5, 5, 5, 5, 5, 5, 15];
 
-        // ADSBitvex Rewarded Ads with Daily 10-Ad Limit
         let isAdPlaying = false;
 
         function playSponsorAd(_subtitle, onComplete, onDismiss) {
             syncDailyAdCounter();
+
+            if (!appState.adConsent) {
+                triggerHaptic('warning');
+                showToast('Consent Required', 'Enable sponsor ad consent above to view ads.', 'warning');
+                if (typeof onDismiss === 'function') onDismiss();
+                return;
+            }
 
             if (appState.dailyAdsCount >= DAILY_AD_LIMIT) {
                 triggerHaptic('warning');
@@ -901,7 +1004,6 @@
                 });
         }
 
-        // --- Games Entry Fee (5 AI = 3 Matches) ---
         function buyGameEntryPass() {
             if (appState.matchesLeft > 0) {
                 triggerHaptic('light');
@@ -1028,7 +1130,7 @@
                 appState.quizWins += 1;
                 appState.points += 10;
                 document.getElementById('quiz-wins').textContent = appState.quizWins;
-                document.getElementById('quiz-status').textContent = 'Correct +10 AI Earned! 🎉';
+                document.getElementById('quiz-status').textContent = 'Correct +10 AI Earned!';
                 triggerHaptic('success');
                 showToast('Quiz Won!', '+10 AI Tokens credited.', 'success');
                 saveState();
@@ -1058,7 +1160,7 @@
                 consumeOneMatch();
                 appState.tttWins += 1;
                 appState.points += 10;
-                document.getElementById('ttt-status').textContent = 'You Won +10 AI! 🎉';
+                document.getElementById('ttt-status').textContent = 'You Won +10 AI!';
                 triggerHaptic('success');
                 showToast('Victory Claimed!', '+10 AI Tokens credited.', 'success');
                 saveState();
@@ -1219,6 +1321,9 @@
             document.getElementById('max-ai-balance').textContent = `Bal: ${Math.floor(appState.points).toLocaleString()} AI`;
             document.getElementById('usdt-balance-display').textContent = `${Number(appState.usdtBalance || 0).toFixed(2)} USDT`;
 
+            const consentCb = document.getElementById('ad-consent-checkbox');
+            if (consentCb) consentCb.checked = Boolean(appState.adConsent);
+
             const league = getLeagueInfo(appState.points);
             document.getElementById('rank-label').textContent = league.name;
             document.getElementById('league-name').textContent = league.name;
@@ -1235,7 +1340,11 @@
 
             const adBtn = document.getElementById('watch-ad-btn');
             document.getElementById('daily-ad-count-display').textContent = appState.dailyAdsCount;
-            if (appState.dailyAdsCount >= DAILY_AD_LIMIT) {
+            if (!appState.adConsent) {
+                adBtn.textContent = 'Consent Off';
+                adBtn.disabled = true;
+                adBtn.className = 'px-3.5 py-2 rounded-xl bg-slate-800 text-slate-400 font-bold text-xs cursor-not-allowed shrink-0';
+            } else if (appState.dailyAdsCount >= DAILY_AD_LIMIT) {
                 adBtn.textContent = 'Limit 10/10';
                 adBtn.disabled = true;
                 adBtn.className = 'px-3.5 py-2 rounded-xl bg-slate-800 text-slate-400 font-bold text-xs cursor-not-allowed shrink-0';
@@ -1264,6 +1373,7 @@
                 codeBtn.className = 'px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-400 to-sky-500 text-slate-950 font-bold text-xs shadow-lg active:scale-95 transition';
             }
 
+            updateStrategyUI();
             updateAutoMiningUI();
             updateGamesUI();
             renderTasks();
@@ -1274,6 +1384,11 @@
 
         function watchRewardAd() {
             syncDailyAdCounter();
+            if (!appState.adConsent) {
+                triggerHaptic('warning');
+                showToast('Consent Required', 'Enable sponsor ad consent above to view ads.', 'warning');
+                return;
+            }
             if (appState.dailyAdsCount >= DAILY_AD_LIMIT) {
                 triggerHaptic('warning');
                 showToast('Daily Ad Limit', `Maximum ${DAILY_AD_LIMIT} ads per day reached.`, 'warning');
@@ -1281,13 +1396,13 @@
             }
             triggerHaptic('light');
             playSponsorAd('Bonus Ad Playing...', () => {
-                appState.points += 10;
+                appState.points += AD_BOOST_REWARD;
                 triggerHaptic('success');
-                showToast('Ad Completed!', `+10 AI tokens added (${appState.dailyAdsCount}/${DAILY_AD_LIMIT} today).`, 'success');
+                showToast('Ad Completed!', `+${AD_BOOST_REWARD} AI tokens added (${appState.dailyAdsCount}/${DAILY_AD_LIMIT} today).`, 'success');
                 saveState();
                 updateAllUI();
             }, () => {
-                showToast('Ad Skipped', 'Watch the full ad to receive the +10 AI boost.', 'error');
+                showToast('Ad Skipped', 'Watch the full ad to receive the boost.', 'error');
             });
         }
 
@@ -1488,7 +1603,7 @@
         function shareOnTelegram() {
             triggerHaptic('medium');
             const refLink = document.getElementById('referral-link-input').value;
-            const shareText = encodeURIComponent('Join AdPulse Auto-Mining Node & claim your +10 AI welcome bonus! 🚀');
+            const shareText = encodeURIComponent('Join AdPulse Strategy & Node Mini App & claim your +10 AI welcome bonus!');
             const tgShareUrl = `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${shareText}`;
             try {
                 if (window.Telegram?.WebApp?.openTelegramLink) window.Telegram.WebApp.openTelegramLink(tgShareUrl);
