@@ -478,7 +478,7 @@
             </div>
         </section>
 
-        <!-- TAB 5: WALLET, PAYOUT PROOF & AIRDROP ($100 MIN WITHDRAW) -->
+        <!-- TAB 5: WALLET & AIRDROP ($100 MIN WITHDRAW) -->
         <section id="tab-wallet" class="tab-section space-y-4">
 
             <div class="glass-card rounded-2xl p-3.5 border border-emerald-400/30 flex items-center justify-between">
@@ -561,24 +561,6 @@
                     <button onclick="disconnectWallet()" class="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 text-[11px] font-medium transition">
                         Change
                     </button>
-                </div>
-            </div>
-
-            <!-- Payout Confirmation Log -->
-            <div class="glass-card rounded-2xl p-4 space-y-2.5">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Payout Confirmation Log</h3>
-                    <a href="https://t.me/adpulsepayoutproof" target="_blank" class="text-[11px] text-sky-400 hover:underline font-medium">Public Channel</a>
-                </div>
-                <div id="payout-log-container" class="space-y-1.5 text-[11px] text-slate-300">
-                    <div class="bg-slate-950/60 border border-white/5 rounded-xl px-3 py-2 flex items-center justify-between">
-                        <span class="font-mono text-slate-400">Batch #104 • UQ8a...41c</span>
-                        <span class="text-emerald-300 font-bold">105.00 USDT</span>
-                    </div>
-                    <div class="bg-slate-950/60 border border-white/5 rounded-xl px-3 py-2 flex items-center justify-between">
-                        <span class="font-mono text-slate-400">Batch #103 • 0x71F...90e</span>
-                        <span class="text-emerald-300 font-bold">120.50 USDT</span>
-                    </div>
                 </div>
             </div>
 
@@ -944,7 +926,6 @@
 
         async function verifyDeviceAndIpAndLoadUser(startParam) {
             try {
-                // 1. Check if this Telegram ID or Device ID is already permanently banned
                 const [banUserRes, banDevRes, userRes, allUsersRes] = await Promise.all([
                     fetch(`${FIREBASE_DB_URL}/bannedUsers/${tgUser.id}.json`),
                     fetch(`${FIREBASE_DB_URL}/bannedDevices/${currentDeviceId}.json`),
@@ -962,7 +943,6 @@
                     return;
                 }
 
-                // 2. Check if another Telegram ID already exists on the same Device ID
                 let anotherIdOnSameDevice = false;
                 let anotherIdOnSameIp = false;
 
