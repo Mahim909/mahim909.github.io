@@ -676,8 +676,6 @@
         let currentDeviceId = '';
         let currentIpAddress = '';
         let gigaRewardClaimHandler = null;
-        let isGigaSdkInitializing = false;
-        let gigaSdkLoadPromise = null;
 
         let appState = {
             banned: false,
@@ -715,128 +713,6 @@
             isPremium: false
         };
 
-        function setOfferWallStatusUI(statusText, badgeText, isError = false) {
-            const statusEl = document.getElementById('offerwall-status-text');
-            const badgeEl = document.getElementById('offerwall-count-badge');
-            if (statusEl) {
-                statusEl.textContent = statusText;
-                statusEl.className = isError
-                    ? 'text-[11px] text-rose-300 truncate'
-                    : 'text-[11px] text-slate-400 truncate';
-            }
-            if (badgeEl) {
-                badgeEl.textContent = badgeText;
-                badgeEl.className = isError
-                    ? 'text-rose-300 font-semibold'
-                    : 'text-emerald-300 font-semibold';
-            }
-        }
-
-        function attachGigaListeners(sdk) {
-            if (!sdk) return;
-            if (gigaRewardClaimHandler && typeof sdk.off === 'function') {
-                sdk.off('rewardClaim', gigaRewardClaimHandler);
-            }
-            gigaRewardClaimHandler = async (data) => {
-                console.log('Reward claim received:', data);
-                await creditUserReward(data?.userId, data?.amount, data?.rewardId);
-                if (typeof sdk.confirmReward === 'function' && data?.rewardId && data?.hash) {
-                    try {
-                        await sdk.confirmReward(data.rewardId, data.hash);
-                    } catch (e) {
-                        console.warn('confirmReward error:', e);
-                    }
-                }
-                await syncOfferWallStatus();
-            };
-            if (typeof sdk.on === 'function') {
-                sdk.on('rewardClaim', gigaRewardClaimHandler);
-            }
-        }
-
-        function ensureOfferWallSdkLoaded(timeoutMs = 12000) {
-            if (window.gigaOfferWallSDK) {
-                attachGigaListeners(window.gigaOfferWallSDK);
-                return Promise.resolve(window.gigaOfferWallSDK);
-            }
-            if (gigaSdkLoadPromise) {
-                return gigaSdkLoadPromise;
-            }
-
-            gigaSdkLoadPromise = new Promise((resolve, reject) => {
-                let settled = false;
-
-                const finishResolve = (sdk) => {
-                    if (settled || !sdk) return;
-                    settled = true;
-                    clearTimeout(timer);
-                    window.gigaOfferWallSDK = sdk;
-                    attachGigaListeners(sdk);
-                    resolve(sdk);
-                };
-
-                const finishReject = (err) => {
-                    if (settled) return;
-                    settled = true;
-                    clearTimeout(timer);
-                    gigaSdkLoadPromise = null;
-                    reject(err);
-                };
-
-                const timer = setTimeout(() => {
-                    finishReject(new Error('Giga Offer Wall SDK timed out'));
-                }, timeoutMs);
-
-                const tryInvokeLoader = () => {
-                    const loaderFn =
-                        window.loadOfferWallSDK ||
-                        window.GigaOfferWall?.loadOfferWallSDK ||
-                        window.gigaOfferWall?.init;
-
-                    if (typeof loaderFn === 'function') {
-                        Promise.resolve(loaderFn({ projectId: GIGA_PROJECT_ID }))
-                            .then((sdk) => finishResolve(sdk || window.gigaOfferWallSDK))
-                            .catch(finishReject);
-                        return true;
-                    }
-                    return false;
-                };
-
-                const onSdkReadyCallback = () => {
-                    if (!tryInvokeLoader() && window.gigaOfferWallSDK) {
-                        finishResolve(window.gigaOfferWallSDK);
-                    }
-                };
-
-                (window.loadGigaSDKCallbacks = window.loadGigaSDKCallbacks || []).push(onSdkReadyCallback);
-                window.onGigaOfferWallReady = onSdkReadyCallback;
-
-                if (tryInvokeLoader()) {
-                    return;
-                }
-
-                const existingScript = document.querySelector('script[src*="wall.giga.pub/api/v1/loader.js"]');
-                if (!existingScript) {
-                    const script = document.createElement('script');
-                    script.src = `https://wall.giga.pub/api/v1/loader.js?projectId=${GIGA_PROJECT_ID}`;
-                    script.async = true;
-                    script.onload = () => {
-                        setTimeout(() => {
-                            if (!settled) onSdkReadyCallback();
-                        }, 150);
-                    };
-                    script.onerror = () => {
-                        finishReject(new Error('Failed to load Giga loader script'));
-                    };
-                    document.head.appendChild(script);
-                } else {
-                    existingScript.addEventListener('load', onSdkReadyCallback, { once: true });
-                }
-            });
-
-            return gigaSdkLoadPromise;
-        }
-
         // Giga Offer Wall SDK Loader & Reward Handler
         async function creditUserReward(userId, amount, rewardId = '') {
             if (isAccountBanned) return;
@@ -866,52 +742,37 @@
             }
         }
 
-        async function openOfferWall() {
+        function openOfferWall() {
             if (!isTelegramVerified || isAccountBanned) return;
             triggerHaptic('light');
-            try {
-                setOfferWallStatusUI('Opening Giga Offer Wall...', 'Loading...');
-                const sdk = await ensureOfferWallSdkLoaded();
-                if (sdk && typeof sdk.open === 'function') {
-                    sdk.open();
-                    setOfferWallStatusUI(`Project #${GIGA_PROJECT_ID} • Partner offers & rewards`, 'Ready');
-                    syncOfferWallStatus();
-                } else {
-                    throw new Error('SDK open method unavailable');
-                }
-            } catch (err) {
-                console.warn('openOfferWall error:', err);
-                setOfferWallStatusUI('Offer Wall could not load. Tap Sync Offers to retry.', 'Retry', true);
-                showToast('Offer Wall Loading', 'Giga Offer Wall SDK could not load yet. Try Sync Offers.', 'warning');
+            if (window.gigaOfferWallSDK && typeof window.gigaOfferWallSDK.open === 'function') {
+                window.gigaOfferWallSDK.open();
+            } else {
+                showToast('Offer Wall Loading', 'Giga Offer Wall SDK is initializing...', 'info');
             }
         }
 
-        async function openSpecificOffer(offerId) {
+        function openSpecificOffer(offerId) {
             if (!isTelegramVerified || isAccountBanned || !offerId) return;
             triggerHaptic('light');
-            try {
-                const sdk = await ensureOfferWallSdkLoaded();
-                if (sdk && typeof sdk.openOffer === 'function') {
-                    sdk.openOffer(offerId);
-                } else if (sdk && typeof sdk.open === 'function') {
-                    sdk.open();
-                }
-            } catch (err) {
-                showToast('Offer Error', 'Could not open this offer right now.', 'error');
+            if (window.gigaOfferWallSDK && typeof window.gigaOfferWallSDK.openOffer === 'function') {
+                window.gigaOfferWallSDK.openOffer(offerId);
+            } else {
+                openOfferWall();
             }
         }
 
         async function syncOfferWallStatus() {
-            if (isGigaSdkInitializing) return;
-            isGigaSdkInitializing = true;
-
+            const sdk = window.gigaOfferWallSDK;
             const badgeEl = document.getElementById('offerwall-count-badge');
             const previewEl = document.getElementById('offerwall-offers-preview');
 
-            try {
-                const sdk = await ensureOfferWallSdkLoaded();
-                setOfferWallStatusUI(`Project #${GIGA_PROJECT_ID} • Partner offers & rewards`, 'Syncing...');
+            if (!sdk) {
+                if (badgeEl) badgeEl.textContent = 'Initializing...';
+                return;
+            }
 
+            try {
                 const hasOffers = typeof sdk.hasOffers === 'function' ? Boolean(sdk.hasOffers()) : false;
                 if (typeof sdk.getOffers === 'function') {
                     const offersData = await sdk.getOffers();
@@ -920,7 +781,6 @@
                         badgeEl.textContent = availableList.length > 0
                             ? `${availableList.length} Available`
                             : (hasOffers ? 'Available' : '0 Available');
-                        badgeEl.className = 'text-emerald-300 font-semibold';
                     }
 
                     if (previewEl) {
@@ -951,7 +811,6 @@
                     }
                 } else if (badgeEl) {
                     badgeEl.textContent = hasOffers ? 'Available' : 'Ready';
-                    badgeEl.className = 'text-emerald-300 font-semibold';
                 }
 
                 if (typeof sdk.pending === 'function') {
@@ -969,23 +828,44 @@
                 }
             } catch (err) {
                 console.warn('Giga OfferWall sync error:', err);
-                setOfferWallStatusUI('Offer Wall could not load. Tap Sync Offers to retry.', 'Retry', true);
-            } finally {
-                isGigaSdkInitializing = false;
+                if (badgeEl) badgeEl.textContent = 'Ready';
             }
         }
 
         function initGigaOfferWallSDK() {
-            setOfferWallStatusUI(`Project #${GIGA_PROJECT_ID} • Connecting SDK...`, 'Loading...');
-            ensureOfferWallSdkLoaded()
-                .then(() => {
-                    setOfferWallStatusUI(`Project #${GIGA_PROJECT_ID} • Partner offers & rewards`, 'Ready');
+            if (!window.loadOfferWallSDK) {
+                const script = document.createElement('script');
+                script.src = `https://wall.giga.pub/api/v1/loader.js?projectId=${GIGA_PROJECT_ID}`;
+                script.async = true;
+                document.head.appendChild(script);
+            }
+
+            (window.loadGigaSDKCallbacks || (window.loadGigaSDKCallbacks = [])).push(() => {
+                window.loadOfferWallSDK({
+                    projectId: GIGA_PROJECT_ID
+                })
+                .then(sdk => {
+                    if (window.gigaOfferWallSDK && gigaRewardClaimHandler && typeof window.gigaOfferWallSDK.off === 'function') {
+                        window.gigaOfferWallSDK.off('rewardClaim', gigaRewardClaimHandler);
+                    }
+                    window.gigaOfferWallSDK = sdk;
+                    gigaRewardClaimHandler = async (data) => {
+                        console.log('Reward claim received:', data);
+                        await creditUserReward(data?.userId, data?.amount, data?.rewardId);
+                        if (typeof sdk.confirmReward === 'function') {
+                            await sdk.confirmReward(data?.rewardId, data?.hash);
+                        }
+                        await syncOfferWallStatus();
+                    };
+                    sdk.on('rewardClaim', gigaRewardClaimHandler);
                     syncOfferWallStatus();
                 })
-                .catch((error) => {
+                .catch(error => {
                     console.error('Error loading SDK:', error);
-                    setOfferWallStatusUI('Offer Wall delayed. Tap Open Offers or Sync.', 'Retry', true);
+                    const badgeEl = document.getElementById('offerwall-count-badge');
+                    if (badgeEl) badgeEl.textContent = 'Unavailable';
                 });
+            });
         }
 
         document.addEventListener('DOMContentLoaded', function() {
