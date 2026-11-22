@@ -112,16 +112,6 @@
         </iframe>
     </div>
 
-    <!-- Direct Gemk Offerwall Embed -->
-    <div id="gemk-direct-embed-wrapper">
-        <button type="button" onclick="hideDirectGemkEmbed()" style="position:fixed; top:12px; right:12px; z-index:1000000;" class="px-3 py-1.5 rounded-xl bg-slate-900/95 text-white border border-sky-400/40 text-xs font-bold shadow-2xl">
-            App View
-        </button>
-        <iframe src="https://wall.gemk.io/?app_id=085f-e18e-9418-46d3&userid={uniqueUserID}"
-        style="position:fixed; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%; border:none; margin:0; padding:0; overflow:hidden; z-index:999999;">
-        </iframe>
-    </div>
-
     <!-- Guard / Ban Lock Screen (Shown if opened outside Telegram or permanently banned) -->
     <div id="access-guard-screen" class="fixed inset-0 z-[100] hidden items-center justify-center p-5 bg-[#060a14]/98 backdrop-blur-xl">
         <div class="glass-card-glow max-w-sm w-full rounded-3xl p-6 text-center space-y-4 border border-rose-500/40">
@@ -763,11 +753,6 @@
         function updateGemkUidLabel() {
             const label = document.getElementById('gemk-uid-label');
             if (label) label.textContent = getGemkUniqueUserId();
-        }
-
-        function hideDirectGemkEmbed() {
-            const wrap = document.getElementById('gemk-direct-embed-wrapper');
-            if (wrap) wrap.style.display = 'none';
         }
 
         function openGemkOfferwall() {
