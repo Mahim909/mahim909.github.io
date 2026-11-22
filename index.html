@@ -57,15 +57,15 @@
 
         .glass-card {
             background: rgba(15, 23, 42, 0.72);
-            backdrop-blur: blur(16px);
-            -webkit-backdrop-blur: blur(16px);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             border: 1px solid rgba(255, 255, 255, 0.08);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.42);
         }
 
         .glass-card-glow {
             background: linear-gradient(145deg, rgba(18, 28, 52, 0.88), rgba(10, 15, 30, 0.94));
-            backdrop-blur: blur(16px);
+            backdrop-filter: blur(16px);
             border: 1px solid rgba(56, 189, 248, 0.25);
             box-shadow: 0 0 25px rgba(56, 189, 248, 0.1), inset 0 0 18px rgba(16, 185, 129, 0.08);
         }
@@ -100,6 +100,17 @@
     </style>
 </head>
 <body class="pb-24 antialiased selection:bg-sky-500/30">
+
+    <!-- Gemk Fullscreen Offerwall Modal -->
+    <div id="gemk-offerwall-overlay" class="fixed inset-0 z-[999999] hidden bg-[#060a14]">
+        <button type="button" onclick="closeGemkOfferwall()" class="fixed top-3 right-3 z-[1000000] px-3.5 py-2 rounded-xl bg-slate-900/95 text-white border border-sky-400/40 text-xs font-bold shadow-2xl flex items-center gap-1.5 active:scale-95 transition">
+            <i class="fa-solid fa-xmark text-rose-400"></i>
+            <span>Close</span>
+        </button>
+        <iframe id="gemk-offerwall-iframe" src=""
+            style="position:fixed; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%; border:none; margin:0; padding:0; overflow:hidden; z-index:999999;">
+        </iframe>
+    </div>
 
     <!-- Guard / Ban Lock Screen (Shown if opened outside Telegram or permanently banned) -->
     <div id="access-guard-screen" class="fixed inset-0 z-[100] hidden items-center justify-center p-5 bg-[#060a14]/98 backdrop-blur-xl">
@@ -303,11 +314,30 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="font-display text-xl font-bold text-white">AI Missions & Offer Wall</h2>
-                    <p class="text-xs text-slate-400">Complete community tasks, cipher & Giga offers</p>
+                    <p class="text-xs text-slate-400">Complete community tasks, cipher & Gemk / Giga offers</p>
                 </div>
                 <div class="px-3 py-1.5 rounded-xl glass-card border border-sky-400/30 text-right">
                     <span class="block text-[10px] text-slate-400">Completed</span>
                     <span id="tasks-completed-counter" class="text-xs font-bold text-sky-300">0 / 2</span>
+                </div>
+            </div>
+
+            <!-- Gemk Offer Wall Card (App ID: 085f-e18e-9418-46d3) -->
+            <div class="glass-card-glow rounded-2xl p-4 border border-sky-400/35 space-y-3">
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-400/35 flex items-center justify-center text-sky-300 text-lg shrink-0">
+                            <i class="fa-solid fa-gem"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <h3 class="text-sm font-bold text-white truncate">Gemk Offer Wall</h3>
+                            <p class="text-[11px] text-slate-400 truncate">App ID: 085f-e18e-9418-46d3 • User: <span id="gemk-uid-label" class="text-sky-300 font-mono">---</span></p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="openGemkOfferwall()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-sky-400 to-emerald-400 text-slate-950 font-bold text-xs shadow-lg active:scale-95 transition shrink-0 flex items-center gap-1.5">
+                        <i class="fa-solid fa-up-right-from-square"></i>
+                        <span>Open Wall</span>
+                    </button>
                 </div>
             </div>
 
@@ -663,6 +693,7 @@
         const FIREBASE_DB_URL = 'https://adsearn-6ef67-default-rtdb.firebaseio.com';
         const BASE_BOT_URL = 'https://t.me/AdPulse24_bot/AdPulse/app';
         const GIGA_PROJECT_ID = '9145';
+        const GEMK_APP_ID = '085f-e18e-9418-46d3';
         const AUTO_MINE_DURATION_MS = 24 * 60 * 60 * 1000;
         const AUTO_MINE_REWARD = 10;
         const MIN_WITHDRAW_USDT = 100;
@@ -712,6 +743,39 @@
             username: '',
             isPremium: false
         };
+
+        // Gemk Offerwall Helpers
+        function getGemkUniqueUserId() {
+            if (tgUser && tgUser.id) return String(tgUser.id);
+            return String(currentDeviceId || 'guest_node');
+        }
+
+        function updateGemkUidLabel() {
+            const label = document.getElementById('gemk-uid-label');
+            if (label) label.textContent = getGemkUniqueUserId();
+        }
+
+        function openGemkOfferwall() {
+            if (!isTelegramVerified || isAccountBanned) return;
+            triggerHaptic('light');
+            const uniqueUserID = encodeURIComponent(getGemkUniqueUserId());
+            const url = `https://wall.gemk.io/?app_id=${GEMK_APP_ID}&userid=${uniqueUserID}`;
+            const overlay = document.getElementById('gemk-offerwall-overlay');
+            const iframe = document.getElementById('gemk-offerwall-iframe');
+            if (iframe && overlay) {
+                iframe.src = url;
+                overlay.classList.remove('hidden');
+            }
+        }
+
+        function closeGemkOfferwall() {
+            triggerHaptic('light');
+            const overlay = document.getElementById('gemk-offerwall-overlay');
+            const iframe = document.getElementById('gemk-offerwall-iframe');
+            if (overlay) overlay.classList.add('hidden');
+            if (iframe) iframe.src = '';
+            refreshReferrals();
+        }
 
         // Giga Offer Wall SDK Loader & Reward Handler
         async function creditUserReward(userId, amount, rewardId = '') {
@@ -1035,6 +1099,7 @@
 
             document.getElementById('header-device-id').textContent = currentDeviceId;
             document.getElementById('header-ip-addr').textContent = currentIpAddress;
+            updateGemkUidLabel();
 
             let startParam = null;
             try {
@@ -1054,6 +1119,7 @@
                     tgUser.isPremium = Boolean(u.is_premium);
                     isTelegramVerified = true;
                     startParam = extractStartParam();
+                    updateGemkUidLabel();
                 }
             } catch (err) {
                 isTelegramVerified = false;
@@ -1219,14 +1285,14 @@
                 const res = await fetch(`${FIREBASE_DB_URL}/users/${tgUser.id}.json`);
                 const data = await res.json();
                 if (data) {
+                    appState = { ...appState, ...data };
                     appState.friends = Array.isArray(data.friends) ? data.friends : [];
                     appState.referredCount = data.referredCount || 0;
-                    await saveUserDataToFirebase();
                     updateAllUI();
-                    showToast('Squad Updated', 'Latest referrals synced from database.', 'success');
+                    showToast('Synced', 'Latest balance & referrals synced.', 'success');
                 }
             } catch (e) {
-                showToast('Sync Failed', 'Could not refresh referrals right now.', 'error');
+                showToast('Sync Failed', 'Could not refresh data right now.', 'error');
             }
         }
 
@@ -1714,6 +1780,7 @@
         function updateAllUI() {
             if (!isTelegramVerified || isAccountBanned) return;
             syncDailyAdCounter();
+            updateGemkUidLabel();
             document.getElementById('balance-display').textContent = Math.floor(appState.points).toLocaleString();
             document.getElementById('max-ai-balance').textContent = `Bal: ${Math.floor(appState.points).toLocaleString()} AI`;
             document.getElementById('usdt-balance-display').textContent = `${Number(appState.usdtBalance || 0).toFixed(2)} USDT`;
@@ -2209,6 +2276,7 @@
             });
 
             if (tabName === 'tasks') {
+                updateGemkUidLabel();
                 syncOfferWallStatus();
             }
         }
