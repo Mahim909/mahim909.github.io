@@ -8,6 +8,8 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <!-- ADSBitvex Reward SDK for Telegram Mini Apps (App ID: 000577) -->
     <script src="https://sdk.adsbitvex.com/functions/v1/ad-script?appid=000577"></script>
+    <!-- Adsgram SDK (Reward: 61343, Interstitial: int-61318, Task: task-61344) -->
+    <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter & Space Grotesk -->
@@ -248,7 +250,7 @@
                 </button>
             </div>
 
-            <!-- Original Feature: Custom Strategy Logic Simulator (Anti-Template Utility) -->
+            <!-- Custom Strategy Logic Simulator -->
             <div class="glass-card rounded-3xl p-4 border border-sky-400/25 space-y-3">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
@@ -269,7 +271,7 @@
                 </div>
             </div>
 
-            <!-- Explicit Ad Placement & Consent + Daily 10-Ad Limit -->
+            <!-- Slot 1: ADSBitvex Sponsor Ad Boost (+5 AI, Daily Limit 10) -->
             <div class="glass-card rounded-2xl p-3.5 border border-sky-400/25 space-y-2.5">
                 <div class="flex items-center justify-between gap-3">
                     <div class="flex items-center gap-3 min-w-0">
@@ -281,7 +283,7 @@
                                 Sponsor Ad Boost 
                                 <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">+5 AI</span>
                             </p>
-                            <p class="text-[10px] text-slate-400 mt-0.5">Placement: Home Reward Card • Today: <span id="daily-ad-count-display" class="text-sky-300 font-semibold">0</span> / 10</p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">Placement: Sponsor Slot 1 • Today: <span id="daily-ad-count-display" class="text-sky-300 font-semibold">0</span> / 10</p>
                         </div>
                     </div>
                     <button onclick="watchRewardAd()" id="watch-ad-btn" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-400 to-sky-500 text-slate-950 font-bold text-xs shadow-lg active:scale-95 transition shrink-0">
@@ -292,6 +294,31 @@
                     <input id="ad-consent-checkbox" type="checkbox" checked onchange="toggleAdConsent()" class="rounded accent-emerald-400">
                     <span>I agree to view optional sponsor ads on declared placement slots.</span>
                 </label>
+            </div>
+
+            <!-- Slot 2: Adsgram Reward Ad (Block ID: 61343, +5 AI, Daily Limit 10) -->
+            <div class="glass-card rounded-2xl p-3.5 border border-emerald-400/30 space-y-2.5">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-300 flex items-center justify-center text-lg shrink-0 border border-emerald-400/30">
+                            <i class="fa-solid fa-film"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs font-bold text-white flex items-center gap-1.5">
+                                Adsgram Reward Ad
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">+5 AI</span>
+                            </p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">Block #61343 • Today: <span id="adsgram-daily-count-display" class="text-emerald-300 font-semibold">0</span> / 10</p>
+                        </div>
+                    </div>
+                    <button onclick="watchAdsgramRewardAd()" id="watch-adsgram-btn" class="px-4 py-2 rounded-xl bg-gradient-to-r from-sky-400 to-emerald-400 text-slate-950 font-bold text-xs shadow-lg active:scale-95 transition shrink-0">
+                        Watch Ad
+                    </button>
+                </div>
+                <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-white/5">
+                    <span>Reward per completed view: <strong class="text-emerald-300">+5 AI Tokens</strong></span>
+                    <span class="font-mono text-sky-300">ID: 61343</span>
+                </div>
             </div>
 
             <!-- Security & Node Stats Overview -->
@@ -314,11 +341,35 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="font-display text-xl font-bold text-white">AI Missions & Offer Wall</h2>
-                    <p class="text-xs text-slate-400">Complete community tasks, cipher & Gemk / Giga offers</p>
+                    <p class="text-xs text-slate-400">Complete community tasks, Adsgram task & offer walls</p>
                 </div>
                 <div class="px-3 py-1.5 rounded-xl glass-card border border-sky-400/30 text-right">
                     <span class="block text-[10px] text-slate-400">Completed</span>
-                    <span id="tasks-completed-counter" class="text-xs font-bold text-sky-300">0 / 2</span>
+                    <span id="tasks-completed-counter" class="text-xs font-bold text-sky-300">0 / 3</span>
+                </div>
+            </div>
+
+            <!-- Adsgram Task Card (Block ID: task-61344, +10 AI) -->
+            <div class="glass-card-glow rounded-2xl p-4 border border-amber-400/35 space-y-3">
+                <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-400/35 flex items-center justify-center text-amber-300 text-lg shrink-0">
+                            <i class="fa-solid fa-bullhorn"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <h3 class="text-sm font-bold text-white truncate flex items-center gap-1.5">
+                                Adsgram Sponsor Task
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">+10 AI</span>
+                            </h3>
+                            <p class="text-[11px] text-slate-400 truncate">Block: task-61344 • Complete task to earn 10 AI</p>
+                        </div>
+                    </div>
+                    <button type="button" id="adsgram-task-btn" onclick="startAdsgramTask()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-emerald-400 text-slate-950 font-bold text-xs shadow-lg active:scale-95 transition shrink-0">
+                        Start Task
+                    </button>
+                </div>
+                <div id="adsgram-task-native-wrap" class="hidden pt-1">
+                    <adsgram-task data-block-id="task-61344" id="adsgram-task-widget"></adsgram-task>
                 </div>
             </div>
 
@@ -694,6 +745,13 @@
         const BASE_BOT_URL = 'https://t.me/AdPulse24_bot/AdPulse/app';
         const GIGA_PROJECT_ID = '9145';
         const GEMK_APP_ID = '085f-e18e-9418-46d3';
+
+        // Adsgram Block IDs
+        const ADSGRAM_REWARD_BLOCK_ID = '61343';
+        const ADSGRAM_INTERSTITIAL_BLOCK_ID = 'int-61318';
+        const ADSGRAM_TASK_BLOCK_ID = 'task-61344';
+        const ADSGRAM_TASK_REWARD = 10;
+
         const AUTO_MINE_DURATION_MS = 24 * 60 * 60 * 1000;
         const AUTO_MINE_REWARD = 10;
         const MIN_WITHDRAW_USDT = 100;
@@ -707,6 +765,10 @@
         let currentDeviceId = '';
         let currentIpAddress = '';
         let gigaRewardClaimHandler = null;
+
+        // Adsgram Controllers
+        let adsgramRewardController = null;
+        let adsgramInterstitialController = null;
 
         let appState = {
             banned: false,
@@ -729,6 +791,9 @@
             adsWatchedTotal: 0,
             dailyAdsDate: new Date().toDateString(),
             dailyAdsCount: 0,
+            adsgramDailyAdsDate: new Date().toDateString(),
+            adsgramDailyAdsCount: 0,
+            adsgramTaskCompletedDate: null,
             matchesLeft: 0,
             tttWins: 0,
             quizWins: 0,
@@ -743,6 +808,161 @@
             username: '',
             isPremium: false
         };
+
+        // Initialize Adsgram SDK Controllers
+        function initAdsgramControllers() {
+            try {
+                if (window.Adsgram && typeof window.Adsgram.init === 'function') {
+                    adsgramRewardController = window.Adsgram.init({ blockId: ADSGRAM_REWARD_BLOCK_ID });
+                    adsgramInterstitialController = window.Adsgram.init({ blockId: ADSGRAM_INTERSTITIAL_BLOCK_ID });
+                }
+            } catch (err) {
+                console.warn('Adsgram init error:', err);
+            }
+        }
+
+        // Show Adsgram Interstitial Ad (Block ID: int-61318)
+        function showAdsgramInterstitial() {
+            if (!isTelegramVerified || isAccountBanned || !appState.adConsent) return;
+            try {
+                if (!adsgramInterstitialController && window.Adsgram?.init) {
+                    adsgramInterstitialController = window.Adsgram.init({ blockId: ADSGRAM_INTERSTITIAL_BLOCK_ID });
+                }
+                if (adsgramInterstitialController && typeof adsgramInterstitialController.show === 'function') {
+                    adsgramInterstitialController.show()
+                        .then(() => {
+                            console.log('Adsgram interstitial shown');
+                        })
+                        .catch((err) => {
+                            console.warn('Adsgram interstitial skipped/unavailable:', err);
+                        });
+                }
+            } catch (e) {
+                console.warn('Interstitial error:', e);
+            }
+        }
+
+        // Adsgram Reward Ad (Block ID: 61343, +5 AI, Daily Limit 10)
+        function watchAdsgramRewardAd() {
+            if (!isTelegramVerified || isAccountBanned) return;
+            syncDailyAdCounter();
+
+            if (!appState.adConsent) {
+                triggerHaptic('warning');
+                showToast('Consent Required', 'Enable sponsor ad consent above to view ads.', 'warning');
+                return;
+            }
+
+            if (appState.adsgramDailyAdsCount >= DAILY_AD_LIMIT) {
+                triggerHaptic('warning');
+                showToast('Daily Limit Reached', `Maximum ${DAILY_AD_LIMIT} Adsgram reward ads reached today.`, 'warning');
+                return;
+            }
+
+            if (isAdPlaying) return;
+
+            if (!adsgramRewardController && window.Adsgram?.init) {
+                adsgramRewardController = window.Adsgram.init({ blockId: ADSGRAM_REWARD_BLOCK_ID });
+            }
+
+            if (!adsgramRewardController || typeof adsgramRewardController.show !== 'function') {
+                showToast('Ad Unavailable', 'Adsgram SDK is loading or not available.', 'error');
+                return;
+            }
+
+            triggerHaptic('light');
+            isAdPlaying = true;
+            adsgramRewardController.show()
+                .then(() => {
+                    isAdPlaying = false;
+                    syncDailyAdCounter();
+                    appState.adsgramDailyAdsCount += 1;
+                    appState.adsWatchedTotal += 1;
+                    appState.points += AD_BOOST_REWARD;
+                    triggerHaptic('success');
+                    showToast('Adsgram Reward!', `+${AD_BOOST_REWARD} AI tokens added (${appState.adsgramDailyAdsCount}/${DAILY_AD_LIMIT} today).`, 'success');
+                    saveState();
+                    updateAllUI();
+                })
+                .catch((err) => {
+                    isAdPlaying = false;
+                    console.warn('Adsgram reward ad error/skipped:', err);
+                    triggerHaptic('error');
+                    showToast('Ad Not Completed', 'Watch the full ad to receive +5 AI tokens.', 'error');
+                });
+        }
+
+        // Adsgram Task Handler (Block ID: task-61344, +10 AI)
+        function setupAdsgramTaskWidget() {
+            const taskWidget = document.getElementById('adsgram-task-widget');
+            if (!taskWidget || taskWidget.dataset.bound === 'true') return;
+            taskWidget.dataset.bound = 'true';
+
+            taskWidget.addEventListener('reward', async () => {
+                await completeAdsgramTaskReward();
+            });
+
+            taskWidget.addEventListener('onReward', async () => {
+                await completeAdsgramTaskReward();
+            });
+
+            taskWidget.addEventListener('onError', (e) => {
+                console.warn('Adsgram task error:', e);
+                showToast('Task Unavailable', 'No Adsgram task available right now.', 'warning');
+            });
+        }
+
+        async function completeAdsgramTaskReward() {
+            if (!isTelegramVerified || isAccountBanned) return;
+            const todayStr = new Date().toDateString();
+            if (appState.adsgramTaskCompletedDate === todayStr) return;
+
+            appState.adsgramTaskCompletedDate = todayStr;
+            appState.points += ADSGRAM_TASK_REWARD;
+            triggerHaptic('success');
+            showToast('Task Completed!', `+${ADSGRAM_TASK_REWARD} AI tokens earned from Adsgram Task.`, 'success');
+            await saveState();
+            updateAllUI();
+            setTimeout(() => showAdsgramInterstitial(), 800);
+        }
+
+        function startAdsgramTask() {
+            if (!isTelegramVerified || isAccountBanned) return;
+            const todayStr = new Date().toDateString();
+            if (appState.adsgramTaskCompletedDate === todayStr) {
+                showToast('Already Claimed', 'You already completed this Adsgram task today.', 'info');
+                return;
+            }
+
+            triggerHaptic('light');
+            const wrap = document.getElementById('adsgram-task-native-wrap');
+            const widget = document.getElementById('adsgram-task-widget');
+            setupAdsgramTaskWidget();
+
+            if (wrap) wrap.classList.remove('hidden');
+
+            if (widget && typeof widget.show === 'function') {
+                widget.show()
+                    .then(() => completeAdsgramTaskReward())
+                    .catch((err) => {
+                        console.warn('Adsgram task show error:', err);
+                    });
+            } else if (window.Adsgram && typeof window.Adsgram.init === 'function') {
+                try {
+                    const taskCtrl = window.Adsgram.init({ blockId: ADSGRAM_TASK_BLOCK_ID });
+                    if (taskCtrl && typeof taskCtrl.show === 'function') {
+                        taskCtrl.show()
+                            .then(() => completeAdsgramTaskReward())
+                            .catch((err) => {
+                                console.warn('Adsgram task controller error:', err);
+                                showToast('Task Notice', 'Interact with the Adsgram task banner below to complete.', 'info');
+                            });
+                    }
+                } catch (e) {
+                    showToast('Task Ready', 'Complete the Adsgram task card below for +10 AI.', 'info');
+                }
+            }
+        }
 
         // Gemk Offerwall Helpers
         function getGemkUniqueUserId() {
@@ -933,6 +1153,8 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+            initAdsgramControllers();
+            setupAdsgramTaskWidget();
             initGigaOfferWallSDK();
             const rewardsBtn = document.getElementById('rewards-button');
             if (rewardsBtn) {
@@ -1016,6 +1238,10 @@
                 appState.dailyAdsDate = todayStr;
                 appState.dailyAdsCount = 0;
             }
+            if (appState.adsgramDailyAdsDate !== todayStr) {
+                appState.adsgramDailyAdsDate = todayStr;
+                appState.adsgramDailyAdsCount = 0;
+            }
         }
 
         function setStrategyMode(mode) {
@@ -1070,7 +1296,8 @@
             const cb = document.getElementById('ad-consent-checkbox');
             appState.adConsent = Boolean(cb.checked);
             saveState();
-            showToast('Ad Preference Saved', appState.adConsent ? 'Sponsor ad slot enabled.' : 'Sponsor ad slot disabled.', 'info');
+            updateAllUI();
+            showToast('Ad Preference Saved', appState.adConsent ? 'Sponsor ad slots enabled.' : 'Sponsor ad slots disabled.', 'info');
         }
 
         function extractStartParam() {
@@ -1595,11 +1822,13 @@
                 showToast('Quiz Won!', '+10 AI Tokens credited.', 'success');
                 saveState();
                 updateAllUI();
-                setTimeout(loadNewQuizQuestion, 1000);
+                setTimeout(() => showAdsgramInterstitial(), 650);
+                setTimeout(loadNewQuizQuestion, 1100);
             } else {
                 triggerHaptic('error');
                 showToast('Incorrect Answer', '1 match used. Try the next question!', 'error');
-                setTimeout(loadNewQuizQuestion, 900);
+                setTimeout(() => showAdsgramInterstitial(), 650);
+                setTimeout(loadNewQuizQuestion, 1000);
             }
         }
 
@@ -1626,6 +1855,7 @@
                 showToast('Victory Claimed!', '+10 AI Tokens credited.', 'success');
                 saveState();
                 updateAllUI();
+                setTimeout(() => showAdsgramInterstitial(), 750);
                 return;
             }
 
@@ -1634,6 +1864,7 @@
                 consumeOneMatch();
                 document.getElementById('ttt-status').textContent = "It's a Draw! (1 match used)";
                 triggerHaptic('warning');
+                setTimeout(() => showAdsgramInterstitial(), 750);
                 return;
             }
 
@@ -1668,6 +1899,7 @@
                 consumeOneMatch();
                 document.getElementById('ttt-status').textContent = 'AI Won! (1 match used)';
                 triggerHaptic('error');
+                setTimeout(() => showAdsgramInterstitial(), 750);
                 return;
             }
 
@@ -1675,6 +1907,7 @@
                 tttIsGameActive = false;
                 consumeOneMatch();
                 document.getElementById('ttt-status').textContent = "It's a Draw! (1 match used)";
+                setTimeout(() => showAdsgramInterstitial(), 750);
                 return;
             }
 
@@ -1802,6 +2035,7 @@
             const todayStr = new Date().toDateString();
             document.getElementById('daily-dot').style.display = (appState.lastCheckInDate === todayStr) ? 'none' : 'block';
 
+            // Slot 1: ADSBitvex Button State
             const adBtn = document.getElementById('watch-ad-btn');
             document.getElementById('daily-ad-count-display').textContent = appState.dailyAdsCount;
             if (!appState.adConsent) {
@@ -1816,6 +2050,41 @@
                 adBtn.textContent = 'Watch Ad';
                 adBtn.disabled = false;
                 adBtn.className = 'px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-400 to-sky-500 text-slate-950 font-bold text-xs shadow-lg active:scale-95 transition shrink-0';
+            }
+
+            // Slot 2: Adsgram Reward Button State (Block 61343)
+            const adsgramBtn = document.getElementById('watch-adsgram-btn');
+            const adsgramCountEl = document.getElementById('adsgram-daily-count-display');
+            if (adsgramCountEl) adsgramCountEl.textContent = appState.adsgramDailyAdsCount || 0;
+            if (adsgramBtn) {
+                if (!appState.adConsent) {
+                    adsgramBtn.textContent = 'Consent Off';
+                    adsgramBtn.disabled = true;
+                    adsgramBtn.className = 'px-3.5 py-2 rounded-xl bg-slate-800 text-slate-400 font-bold text-xs cursor-not-allowed shrink-0';
+                } else if ((appState.adsgramDailyAdsCount || 0) >= DAILY_AD_LIMIT) {
+                    adsgramBtn.textContent = 'Limit 10/10';
+                    adsgramBtn.disabled = true;
+                    adsgramBtn.className = 'px-3.5 py-2 rounded-xl bg-slate-800 text-slate-400 font-bold text-xs cursor-not-allowed shrink-0';
+                } else {
+                    adsgramBtn.textContent = 'Watch Ad';
+                    adsgramBtn.disabled = false;
+                    adsgramBtn.className = 'px-4 py-2 rounded-xl bg-gradient-to-r from-sky-400 to-emerald-400 text-slate-950 font-bold text-xs shadow-lg active:scale-95 transition shrink-0';
+                }
+            }
+
+            // Adsgram Task Button State (task-61344)
+            const adsgramTaskBtn = document.getElementById('adsgram-task-btn');
+            const isAdsgramTaskDone = appState.adsgramTaskCompletedDate === todayStr;
+            if (adsgramTaskBtn) {
+                if (isAdsgramTaskDone) {
+                    adsgramTaskBtn.textContent = 'Done ✓';
+                    adsgramTaskBtn.disabled = true;
+                    adsgramTaskBtn.className = 'px-3.5 py-2 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-bold text-xs shrink-0';
+                } else {
+                    adsgramTaskBtn.textContent = 'Start Task';
+                    adsgramTaskBtn.disabled = false;
+                    adsgramTaskBtn.className = 'px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-emerald-400 text-slate-950 font-bold text-xs shadow-lg active:scale-95 transition shrink-0';
+                }
             }
 
             const todaysCode = getTodaysSecretCode();
@@ -1886,6 +2155,7 @@
                 showToast('Cipher Unlocked!', '+10 AI tokens added.', 'success');
                 saveState();
                 updateAllUI();
+                setTimeout(() => showAdsgramInterstitial(), 750);
             } else {
                 triggerHaptic('error');
                 showToast('Invalid Cipher Code', `Today's cipher code is ${todaysCode}`, 'error');
@@ -1989,6 +2259,7 @@
             saveState();
             updateAllUI();
             closeDailyModal();
+            setTimeout(() => showAdsgramInterstitial(), 650);
         }
 
         function renderTasks() {
@@ -1996,9 +2267,10 @@
             container.innerHTML = '';
             const todayStr = new Date().toDateString();
             const isSecretClaimedToday = appState.dailyCodeClaimedDate === todayStr;
+            const isAdsgramTaskDone = appState.adsgramTaskCompletedDate === todayStr;
 
-            const totalTasks = TASKS_DATA.length + 1;
-            const completedCount = appState.completedTasks.length + (isSecretClaimedToday ? 1 : 0);
+            const totalTasks = TASKS_DATA.length + 2;
+            const completedCount = appState.completedTasks.length + (isSecretClaimedToday ? 1 : 0) + (isAdsgramTaskDone ? 1 : 0);
             document.getElementById('tasks-completed-counter').textContent = `${completedCount} / ${totalTasks}`;
             document.getElementById('tasks-nav-badge').style.display = completedCount >= totalTasks ? 'none' : 'block';
 
@@ -2059,6 +2331,7 @@
             showToast('Task Claimed!', `+${reward} AI tokens added.`, 'success');
             saveState();
             updateAllUI();
+            setTimeout(() => showAdsgramInterstitial(), 750);
         }
 
         function copyReferralLink() {
@@ -2278,6 +2551,7 @@
             if (tabName === 'tasks') {
                 updateGemkUidLabel();
                 syncOfferWallStatus();
+                setupAdsgramTaskWidget();
             }
         }
 
