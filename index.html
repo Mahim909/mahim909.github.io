@@ -342,15 +342,15 @@
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="font-display text-xl font-bold text-white">AI Missions & Offer Wall</h2>
-                    <p class="text-xs text-slate-400">Complete community tasks, Adsgram task & offer walls</p>
+                    <p class="text-xs text-slate-400">Auto-loading Adsgram tasks, community quests & offer walls</p>
                 </div>
                 <div class="px-3 py-1.5 rounded-xl glass-card border border-sky-400/30 text-right">
-                    <span class="block text-[10px] text-slate-400">Completed</span>
-                    <span id="tasks-completed-counter" class="text-xs font-bold text-sky-300">0 / 3</span>
+                    <span class="block text-[10px] text-slate-400">Tasks Claimed</span>
+                    <span id="tasks-completed-counter" class="text-xs font-bold text-sky-300">0</span>
                 </div>
             </div>
 
-            <!-- Adsgram Task Card (Block ID: task-61344, +10 AI) -->
+            <!-- Auto-Loading Adsgram Task Feed Card (Block ID: task-61344, +10 AI) -->
             <div class="glass-card-glow rounded-2xl p-4 border border-amber-400/35 space-y-3">
                 <div class="flex items-center justify-between gap-2">
                     <div class="flex items-center gap-2.5 min-w-0">
@@ -359,18 +359,25 @@
                         </div>
                         <div class="min-w-0">
                             <h3 class="text-sm font-bold text-white truncate flex items-center gap-1.5">
-                                Adsgram Sponsor Task
+                                Adsgram Live Task Stream
                                 <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">+10 AI</span>
                             </h3>
-                            <p class="text-[11px] text-slate-400 truncate">Block: task-61344 • Complete task to earn 10 AI</p>
+                            <p id="adsgram-task-status-label" class="text-[11px] text-slate-400 truncate">Auto-loading block task-61344 • New tasks stream automatically</p>
                         </div>
                     </div>
-                    <button type="button" id="adsgram-task-btn" onclick="startAdsgramTask()" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-emerald-400 text-slate-950 font-bold text-xs shadow-lg active:scale-95 transition shrink-0">
-                        Start Task
+                    <button type="button" id="adsgram-task-btn" onclick="refreshAdsgramTaskFeed(true)" class="px-3 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-emerald-400 text-slate-950 font-bold text-xs shadow-lg active:scale-95 transition shrink-0 flex items-center gap-1">
+                        <i class="fa-solid fa-rotate"></i>
+                        <span>New Task</span>
                     </button>
                 </div>
-                <div id="adsgram-task-native-wrap" class="hidden pt-1">
+
+                <div id="adsgram-task-native-wrap" class="bg-slate-950/75 border border-white/10 rounded-2xl p-3 min-h-[76px] flex flex-col justify-center">
                     <adsgram-task data-block-id="task-61344" id="adsgram-task-widget"></adsgram-task>
+                </div>
+
+                <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-white/5">
+                    <span>Completed Adsgram Tasks: <strong id="adsgram-task-count-display" class="text-emerald-300">0</strong></span>
+                    <span id="adsgram-task-sync-badge" class="font-mono text-sky-300">Auto-Sync Active</span>
                 </div>
             </div>
 
@@ -766,6 +773,8 @@
         let currentDeviceId = '';
         let currentIpAddress = '';
         let gigaRewardClaimHandler = null;
+        let adsgramTaskAutoPollTimer = null;
+        let lastInterstitialTimestamp = 0;
 
         // Adsgram Controllers
         let adsgramRewardController = null;
@@ -794,7 +803,8 @@
             dailyAdsCount: 0,
             adsgramDailyAdsDate: new Date().toDateString(),
             adsgramDailyAdsCount: 0,
-            adsgramTaskCompletedDate: null,
+            adsgramTasksCompletedCount: 0,
+            lastAdsgramTaskRewardAt: 0,
             matchesLeft: 0,
             tttWins: 0,
             quizWins: 0,
@@ -841,6 +851,16 @@
             } catch (e) {
                 console.warn('Interstitial error:', e);
             }
+        }
+
+        // Trigger Interstitial on any Claim action with anti-spam guard
+        function triggerClaimInterstitial(delayMs = 550) {
+            const now = Date.now();
+            if (now - lastInterstitialTimestamp < 1200) return;
+            lastInterstitialTimestamp = now;
+            setTimeout(() => {
+                showAdsgramInterstitial();
+            }, delayMs);
         }
 
         // Adsgram Reward Ad (Block ID: 61343, +5 AI, Daily Limit 10)
@@ -893,76 +913,87 @@
                 });
         }
 
-        // Adsgram Task Handler (Block ID: task-61344, +10 AI)
-        function setupAdsgramTaskWidget() {
-            const taskWidget = document.getElementById('adsgram-task-widget');
+        // Adsgram Auto-Loading Task Feed (Block ID: task-61344, +10 AI, continuous new tasks)
+        function bindAdsgramTaskEvents(taskWidget) {
             if (!taskWidget || taskWidget.dataset.bound === 'true') return;
             taskWidget.dataset.bound = 'true';
 
-            taskWidget.addEventListener('reward', async () => {
+            const handleReward = async () => {
                 await completeAdsgramTaskReward();
-            });
+            };
 
-            taskWidget.addEventListener('onReward', async () => {
-                await completeAdsgramTaskReward();
-            });
+            taskWidget.addEventListener('reward', handleReward);
+            taskWidget.addEventListener('onReward', handleReward);
+            taskWidget.addEventListener('onComplete', handleReward);
 
             taskWidget.addEventListener('onError', (e) => {
-                console.warn('Adsgram task error:', e);
-                showToast('Task Unavailable', 'No Adsgram task available right now.', 'warning');
+                console.warn('Adsgram task stream error:', e);
+                const statusEl = document.getElementById('adsgram-task-status-label');
+                if (statusEl) statusEl.textContent = 'Checking for next available Adsgram task...';
             });
+        }
+
+        function refreshAdsgramTaskFeed(showFeedback = false) {
+            if (!isTelegramVerified || isAccountBanned) return;
+            const wrap = document.getElementById('adsgram-task-native-wrap');
+            if (!wrap) return;
+
+            wrap.classList.remove('hidden');
+            wrap.innerHTML = `<adsgram-task data-block-id="${ADSGRAM_TASK_BLOCK_ID}" id="adsgram-task-widget"></adsgram-task>`;
+
+            const newWidget = document.getElementById('adsgram-task-widget');
+            bindAdsgramTaskEvents(newWidget);
+
+            const statusEl = document.getElementById('adsgram-task-status-label');
+            const badgeEl = document.getElementById('adsgram-task-sync-badge');
+            if (statusEl) statusEl.textContent = `Live feed (${ADSGRAM_TASK_BLOCK_ID}) • Ready for new task`;
+            if (badgeEl) badgeEl.textContent = 'Stream Refreshed';
+
+            if (newWidget && typeof newWidget.load === 'function') {
+                try { newWidget.load(); } catch (e) {}
+            }
+
+            if (showFeedback) {
+                triggerHaptic('light');
+                showToast('Task Stream Refreshed', 'Loaded latest Adsgram task slot.', 'info');
+            }
+        }
+
+        function startAdsgramTaskAutoStream() {
+            refreshAdsgramTaskFeed(false);
+            if (adsgramTaskAutoPollTimer) {
+                clearInterval(adsgramTaskAutoPollTimer);
+            }
+            // Automatically check/refresh the task container every 35 seconds so new tasks keep appearing
+            adsgramTaskAutoPollTimer = setInterval(() => {
+                if (!isTelegramVerified || isAccountBanned) return;
+                const tasksTab = document.getElementById('tab-tasks');
+                if (tasksTab && tasksTab.classList.contains('active')) {
+                    refreshAdsgramTaskFeed(false);
+                }
+            }, 35000);
         }
 
         async function completeAdsgramTaskReward() {
             if (!isTelegramVerified || isAccountBanned) return;
-            const todayStr = new Date().toDateString();
-            if (appState.adsgramTaskCompletedDate === todayStr) return;
+            const now = Date.now();
+            // Prevent accidental duplicate firing within 3 seconds on the same task completion
+            if (now - (Number(appState.lastAdsgramTaskRewardAt) || 0) < 3000) return;
 
-            appState.adsgramTaskCompletedDate = todayStr;
+            appState.lastAdsgramTaskRewardAt = now;
+            appState.adsgramTasksCompletedCount = (Number(appState.adsgramTasksCompletedCount) || 0) + 1;
             appState.points += ADSGRAM_TASK_REWARD;
+
             triggerHaptic('success');
-            showToast('Task Completed!', `+${ADSGRAM_TASK_REWARD} AI tokens earned from Adsgram Task.`, 'success');
+            showToast('Task Claimed!', `+${ADSGRAM_TASK_REWARD} AI tokens earned! Loading next task...`, 'success');
             await saveState();
             updateAllUI();
-            setTimeout(() => showAdsgramInterstitial(), 800);
-        }
 
-        function startAdsgramTask() {
-            if (!isTelegramVerified || isAccountBanned) return;
-            const todayStr = new Date().toDateString();
-            if (appState.adsgramTaskCompletedDate === todayStr) {
-                showToast('Already Claimed', 'You already completed this Adsgram task today.', 'info');
-                return;
-            }
-
-            triggerHaptic('light');
-            const wrap = document.getElementById('adsgram-task-native-wrap');
-            const widget = document.getElementById('adsgram-task-widget');
-            setupAdsgramTaskWidget();
-
-            if (wrap) wrap.classList.remove('hidden');
-
-            if (widget && typeof widget.show === 'function') {
-                widget.show()
-                    .then(() => completeAdsgramTaskReward())
-                    .catch((err) => {
-                        console.warn('Adsgram task show error:', err);
-                    });
-            } else if (window.Adsgram && typeof window.Adsgram.init === 'function') {
-                try {
-                    const taskCtrl = window.Adsgram.init({ blockId: ADSGRAM_TASK_BLOCK_ID });
-                    if (taskCtrl && typeof taskCtrl.show === 'function') {
-                        taskCtrl.show()
-                            .then(() => completeAdsgramTaskReward())
-                            .catch((err) => {
-                                console.warn('Adsgram task controller error:', err);
-                                showToast('Task Notice', 'Interact with the Adsgram task banner below to complete.', 'info');
-                            });
-                    }
-                } catch (e) {
-                    showToast('Task Ready', 'Complete the Adsgram task card below for +10 AI.', 'info');
-                }
-            }
+            // Load next task in the stream and show Adsgram interstitial
+            setTimeout(() => {
+                refreshAdsgramTaskFeed(false);
+            }, 600);
+            triggerClaimInterstitial(900);
         }
 
         // Gemk Offerwall Helpers
@@ -1020,10 +1051,11 @@
 
             appState.points += numericAmount;
             triggerHaptic('success');
-            showToast('Offer Wall Reward!', `+${numericAmount} AI tokens credited.`, 'success');
+            showToast('Offer Wall Claimed!', `+${numericAmount} AI tokens credited.`, 'success');
             await saveUserDataToFirebase();
             if (isTelegramVerified && !isAccountBanned) {
                 updateAllUI();
+                triggerClaimInterstitial(750);
             }
         }
 
@@ -1155,7 +1187,7 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             initAdsgramControllers();
-            setupAdsgramTaskWidget();
+            startAdsgramTaskAutoStream();
             initGigaOfferWallSDK();
             const rewardsBtn = document.getElementById('rewards-button');
             if (rewardsBtn) {
@@ -1164,6 +1196,7 @@
         });
 
         window.addEventListener('beforeunload', () => {
+            if (adsgramTaskAutoPollTimer) clearInterval(adsgramTaskAutoPollTimer);
             if (window.gigaOfferWallSDK) {
                 if (gigaRewardClaimHandler && typeof window.gigaOfferWallSDK.off === 'function') {
                     window.gigaOfferWallSDK.off('rewardClaim', gigaRewardClaimHandler);
@@ -1503,6 +1536,7 @@
             if (!isAccountBanned) {
                 updateAllUI();
                 syncOfferWallStatus();
+                refreshAdsgramTaskFeed(false);
             }
         }
 
@@ -1621,6 +1655,7 @@
             showToast('24H Cycle Claimed!', `+${AUTO_MINE_REWARD} AI tokens credited. New 24H cycle started!`, 'success');
             saveState();
             updateAllUI();
+            triggerClaimInterstitial(700);
         }
 
         let tttBoard = ['', '', '', '', '', '', '', '', ''];
@@ -1823,12 +1858,12 @@
                 showToast('Quiz Won!', '+10 AI Tokens credited.', 'success');
                 saveState();
                 updateAllUI();
-                setTimeout(() => showAdsgramInterstitial(), 650);
+                triggerClaimInterstitial(650);
                 setTimeout(loadNewQuizQuestion, 1100);
             } else {
                 triggerHaptic('error');
                 showToast('Incorrect Answer', '1 match used. Try the next question!', 'error');
-                setTimeout(() => showAdsgramInterstitial(), 650);
+                triggerClaimInterstitial(650);
                 setTimeout(loadNewQuizQuestion, 1000);
             }
         }
@@ -1856,7 +1891,7 @@
                 showToast('Victory Claimed!', '+10 AI Tokens credited.', 'success');
                 saveState();
                 updateAllUI();
-                setTimeout(() => showAdsgramInterstitial(), 750);
+                triggerClaimInterstitial(750);
                 return;
             }
 
@@ -1865,7 +1900,7 @@
                 consumeOneMatch();
                 document.getElementById('ttt-status').textContent = "It's a Draw! (1 match used)";
                 triggerHaptic('warning');
-                setTimeout(() => showAdsgramInterstitial(), 750);
+                triggerClaimInterstitial(750);
                 return;
             }
 
@@ -1900,7 +1935,7 @@
                 consumeOneMatch();
                 document.getElementById('ttt-status').textContent = 'AI Won! (1 match used)';
                 triggerHaptic('error');
-                setTimeout(() => showAdsgramInterstitial(), 750);
+                triggerClaimInterstitial(750);
                 return;
             }
 
@@ -1908,7 +1943,7 @@
                 tttIsGameActive = false;
                 consumeOneMatch();
                 document.getElementById('ttt-status').textContent = "It's a Draw! (1 match used)";
-                setTimeout(() => showAdsgramInterstitial(), 750);
+                triggerClaimInterstitial(750);
                 return;
             }
 
@@ -2073,20 +2108,9 @@
                 }
             }
 
-            // Adsgram Task Button State (task-61344)
-            const adsgramTaskBtn = document.getElementById('adsgram-task-btn');
-            const isAdsgramTaskDone = appState.adsgramTaskCompletedDate === todayStr;
-            if (adsgramTaskBtn) {
-                if (isAdsgramTaskDone) {
-                    adsgramTaskBtn.textContent = 'Done ✓';
-                    adsgramTaskBtn.disabled = true;
-                    adsgramTaskBtn.className = 'px-3.5 py-2 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 font-bold text-xs shrink-0';
-                } else {
-                    adsgramTaskBtn.textContent = 'Start Task';
-                    adsgramTaskBtn.disabled = false;
-                    adsgramTaskBtn.className = 'px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-emerald-400 text-slate-950 font-bold text-xs shadow-lg active:scale-95 transition shrink-0';
-                }
-            }
+            // Adsgram Task Stream Counter
+            const adsgramTaskCountEl = document.getElementById('adsgram-task-count-display');
+            if (adsgramTaskCountEl) adsgramTaskCountEl.textContent = appState.adsgramTasksCompletedCount || 0;
 
             const todaysCode = getTodaysSecretCode();
             document.getElementById('today-secret-hint').textContent = todaysCode;
@@ -2153,10 +2177,10 @@
                 appState.dailyCodeClaimedDate = todayStr;
                 appState.points += 10;
                 triggerHaptic('success');
-                showToast('Cipher Unlocked!', '+10 AI tokens added.', 'success');
+                showToast('Cipher Claimed!', '+10 AI tokens added.', 'success');
                 saveState();
                 updateAllUI();
-                setTimeout(() => showAdsgramInterstitial(), 750);
+                triggerClaimInterstitial(750);
             } else {
                 triggerHaptic('error');
                 showToast('Invalid Cipher Code', `Today's cipher code is ${todaysCode}`, 'error');
@@ -2260,7 +2284,7 @@
             saveState();
             updateAllUI();
             closeDailyModal();
-            setTimeout(() => showAdsgramInterstitial(), 650);
+            triggerClaimInterstitial(650);
         }
 
         function renderTasks() {
@@ -2268,12 +2292,11 @@
             container.innerHTML = '';
             const todayStr = new Date().toDateString();
             const isSecretClaimedToday = appState.dailyCodeClaimedDate === todayStr;
-            const isAdsgramTaskDone = appState.adsgramTaskCompletedDate === todayStr;
+            const adsgramDoneCount = Number(appState.adsgramTasksCompletedCount) || 0;
 
-            const totalTasks = TASKS_DATA.length + 2;
-            const completedCount = appState.completedTasks.length + (isSecretClaimedToday ? 1 : 0) + (isAdsgramTaskDone ? 1 : 0);
-            document.getElementById('tasks-completed-counter').textContent = `${completedCount} / ${totalTasks}`;
-            document.getElementById('tasks-nav-badge').style.display = completedCount >= totalTasks ? 'none' : 'block';
+            const completedCount = appState.completedTasks.length + (isSecretClaimedToday ? 1 : 0) + adsgramDoneCount;
+            document.getElementById('tasks-completed-counter').textContent = `${completedCount}`;
+            document.getElementById('tasks-nav-badge').style.display = (appState.completedTasks.length >= TASKS_DATA.length && isSecretClaimedToday) ? 'none' : 'block';
 
             TASKS_DATA.forEach(task => {
                 const isCompleted = appState.completedTasks.includes(task.id);
@@ -2332,7 +2355,7 @@
             showToast('Task Claimed!', `+${reward} AI tokens added.`, 'success');
             saveState();
             updateAllUI();
-            setTimeout(() => showAdsgramInterstitial(), 750);
+            triggerClaimInterstitial(750);
         }
 
         function copyReferralLink() {
@@ -2405,6 +2428,7 @@
             showToast('Referral Claimed!', '+10 AI tokens added.', 'success');
             saveState();
             updateAllUI();
+            triggerClaimInterstitial(700);
         }
 
         function connectWallet() {
@@ -2531,6 +2555,7 @@
                 });
 
                 showToast('Withdrawal Requested!', `Your $${currentUsdt.toFixed(2)} USDT payout request has been submitted.`, 'success');
+                triggerClaimInterstitial(750);
             } catch (e) {
                 showToast('Error', 'Failed to submit withdrawal request.', 'error');
             }
@@ -2552,7 +2577,7 @@
             if (tabName === 'tasks') {
                 updateGemkUidLabel();
                 syncOfferWallStatus();
-                setupAdsgramTaskWidget();
+                refreshAdsgramTaskFeed(false);
             }
         }
 
@@ -2590,6 +2615,7 @@
                 updateAutoMiningUI();
                 updateSecretCountdown();
                 loadNewQuizQuestion();
+                refreshAdsgramTaskFeed(false);
             }
         });
     </script>
