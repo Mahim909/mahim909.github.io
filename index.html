@@ -6,11 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ADPULSE NODE — Strategy & Utility Mini App</title>
     <!-- Telegram WebApp SDK -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js?56"></script>
     <!-- ADSBitvex Reward SDK for Telegram Mini Apps (App ID: 000577) -->
     <script src="https://sdk.adsbitvex.com/functions/v1/ad-script?appid=000577"></script>
     <!-- Adsgram SDK (Reward: 61343, Interstitial: int-61318, Task: task-61344) -->
     <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+    <!-- Adexium Widget SDK (WID: 6972f1b4-adb2-4e3f-8814-9386b9cf78c4) -->
+    <script type="text/javascript" src="https://cdn.tgads.space/assets/js/adexium-widget.min.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts: Inter & Space Grotesk -->
@@ -319,6 +321,31 @@
                 <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-white/5">
                     <span>Reward per completed view: <strong class="text-emerald-300">+50 AI Tokens</strong></span>
                     <span class="font-mono text-sky-300">ID: 61343</span>
+                </div>
+            </div>
+
+            <!-- Slot 3: Adexium Reward Ad (WID: 6972f1b4-adb2-4e3f-8814-9386b9cf78c4, +25 AI, Daily Limit 10) -->
+            <div class="glass-card rounded-2xl p-3.5 border border-amber-400/30 space-y-2.5">
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-300 flex items-center justify-center text-lg shrink-0 border border-amber-400/30">
+                            <i class="fa-solid fa-bolt"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-xs font-bold text-white flex items-center gap-1.5">
+                                Adexium Reward
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">+25 AI</span>
+                            </p>
+                            <p class="text-[10px] text-slate-400 mt-0.5">Adexium Slot • Today: <span id="adexium-daily-count-display" class="text-amber-300 font-semibold">0</span> / 10</p>
+                        </div>
+                    </div>
+                    <button onclick="watchAdexiumRewardAd()" id="watch-adexium-btn" class="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-emerald-400 text-slate-950 font-bold text-xs shadow-lg active:scale-95 transition shrink-0">
+                        Watch Ad
+                    </button>
+                </div>
+                <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-white/5">
+                    <span>Reward per completed view: <strong class="text-emerald-300">+25 AI Tokens</strong></span>
+                    <span id="adexium-status-label" class="font-mono text-amber-300 truncate max-w-[140px]">WID: 6972f1b4...78c4</span>
                 </div>
             </div>
 
@@ -761,6 +788,10 @@
         const ADSGRAM_TASK_REWARD = 100;
         const CIPHER_REWARD = 100;
 
+        // Adexium Config
+        const ADEXIUM_WIDGET_ID = '6972f1b4-adb2-4e3f-8814-9386b9cf78c4';
+        const ADEXIUM_REWARD = 25;
+
         const AUTO_MINE_DURATION_MS = 24 * 60 * 60 * 1000;
         const AUTO_MINE_REWARD = 10;
         const MIN_WITHDRAW_USDT = 100;
@@ -780,6 +811,10 @@
         // Adsgram Controllers
         let adsgramRewardController = null;
         let adsgramInterstitialController = null;
+
+        // Adexium Controller & Reward Pending State
+        let adexiumRewardWidget = null;
+        let pendingAdexiumReward = false;
 
         let appState = {
             banned: false,
@@ -804,6 +839,8 @@
             dailyAdsCount: 0,
             adsgramDailyAdsDate: new Date().toDateString(),
             adsgramDailyAdsCount: 0,
+            adexiumDailyAdsDate: new Date().toDateString(),
+            adexiumDailyAdsCount: 0,
             adsgramTasksCompletedCount: 0,
             lastAdsgramTaskRewardAt: 0,
             matchesLeft: 0,
@@ -830,6 +867,110 @@
                 }
             } catch (err) {
                 console.warn('Adsgram init error:', err);
+            }
+        }
+
+        // Initialize Adexium Widget
+        function initAdexiumWidget() {
+            try {
+                if (typeof window.AdexiumWidget !== 'function') {
+                    console.warn('AdexiumWidget SDK not loaded');
+                    return;
+                }
+                if (!adexiumRewardWidget) {
+                    adexiumRewardWidget = new window.AdexiumWidget({
+                        wid: ADEXIUM_WIDGET_ID,
+                        adFormat: 'interstitial'
+                    });
+
+                    adexiumRewardWidget.on('adReceived', (ads) => {
+                        if (pendingAdexiumReward && Array.isArray(ads) && ads.length > 0 && typeof adexiumRewardWidget.displayAd === 'function') {
+                            adexiumRewardWidget.displayAd(ads);
+                        }
+                    });
+
+                    const grantAdexiumReward = () => {
+                        if (!pendingAdexiumReward) return;
+                        pendingAdexiumReward = false;
+                        isAdPlaying = false;
+
+                        if (!isTelegramVerified || isAccountBanned) return;
+                        syncDailyAdCounter();
+                        appState.adexiumDailyAdsCount = (Number(appState.adexiumDailyAdsCount) || 0) + 1;
+                        appState.adsWatchedTotal = (Number(appState.adsWatchedTotal) || 0) + 1;
+                        appState.points += ADEXIUM_REWARD;
+
+                        triggerHaptic('success');
+                        showToast('Adexium Reward!', `+${ADEXIUM_REWARD} AI tokens added (${appState.adexiumDailyAdsCount}/${DAILY_AD_LIMIT} today).`, 'success');
+                        saveState();
+                        updateAllUI();
+                    };
+
+                    adexiumRewardWidget.on('adPlaybackCompleted', grantAdexiumReward);
+                    adexiumRewardWidget.on('adClosed', () => {
+                        if (pendingAdexiumReward) {
+                            grantAdexiumReward();
+                        }
+                    });
+
+                    adexiumRewardWidget.on('noAdFound', () => {
+                        if (!pendingAdexiumReward) return;
+                        pendingAdexiumReward = false;
+                        isAdPlaying = false;
+                        triggerHaptic('warning');
+                        showToast('No Ad Available', 'No Adexium ad found right now. Try again shortly.', 'warning');
+                        updateAllUI();
+                    });
+
+                    adexiumRewardWidget.on('requestAdError', () => {
+                        if (!pendingAdexiumReward) return;
+                        pendingAdexiumReward = false;
+                        isAdPlaying = false;
+                        triggerHaptic('error');
+                        showToast('Ad Request Failed', 'Could not load Adexium ad right now.', 'error');
+                        updateAllUI();
+                    });
+                }
+            } catch (err) {
+                console.warn('Adexium init error:', err);
+            }
+        }
+
+        function watchAdexiumRewardAd() {
+            if (!isTelegramVerified || isAccountBanned) return;
+            syncDailyAdCounter();
+
+            if (!appState.adConsent) {
+                triggerHaptic('warning');
+                showToast('Consent Required', 'Enable sponsor ad consent above to view ads.', 'warning');
+                return;
+            }
+
+            if ((appState.adexiumDailyAdsCount || 0) >= DAILY_AD_LIMIT) {
+                triggerHaptic('warning');
+                showToast('Daily Limit Reached', `Maximum ${DAILY_AD_LIMIT} Adexium reward ads reached today.`, 'warning');
+                return;
+            }
+
+            if (isAdPlaying) return;
+
+            initAdexiumWidget();
+
+            if (!adexiumRewardWidget || typeof adexiumRewardWidget.requestRewardedAd !== 'function') {
+                showToast('Ad Unavailable', 'Adexium SDK is loading or not available.', 'error');
+                return;
+            }
+
+            triggerHaptic('light');
+            isAdPlaying = true;
+            pendingAdexiumReward = true;
+
+            try {
+                adexiumRewardWidget.requestRewardedAd('interstitial');
+            } catch (e) {
+                pendingAdexiumReward = false;
+                isAdPlaying = false;
+                showToast('Ad Error', 'Unable to start Adexium rewarded ad.', 'error');
             }
         }
 
@@ -1185,6 +1326,7 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             initAdsgramControllers();
+            initAdexiumWidget();
             startAdsgramTaskAutoStream();
             initGigaOfferWallSDK();
             const rewardsBtn = document.getElementById('rewards-button');
@@ -1273,6 +1415,10 @@
             if (appState.adsgramDailyAdsDate !== todayStr) {
                 appState.adsgramDailyAdsDate = todayStr;
                 appState.adsgramDailyAdsCount = 0;
+            }
+            if (appState.adexiumDailyAdsDate !== todayStr) {
+                appState.adexiumDailyAdsDate = todayStr;
+                appState.adexiumDailyAdsCount = 0;
             }
         }
 
@@ -2104,6 +2250,26 @@
                     adsgramBtn.textContent = 'Watch Ad';
                     adsgramBtn.disabled = false;
                     adsgramBtn.className = 'px-4 py-2 rounded-xl bg-gradient-to-r from-sky-400 to-emerald-400 text-slate-950 font-bold text-xs shadow-lg active:scale-95 transition shrink-0';
+                }
+            }
+
+            // Slot 3: Adexium Reward Button State (WID: 6972f1b4-adb2-4e3f-8814-9386b9cf78c4, +25 AI, Daily Limit 10)
+            const adexiumBtn = document.getElementById('watch-adexium-btn');
+            const adexiumCountEl = document.getElementById('adexium-daily-count-display');
+            if (adexiumCountEl) adexiumCountEl.textContent = appState.adexiumDailyAdsCount || 0;
+            if (adexiumBtn) {
+                if (!appState.adConsent) {
+                    adexiumBtn.textContent = 'Consent Off';
+                    adexiumBtn.disabled = true;
+                    adexiumBtn.className = 'px-3.5 py-2 rounded-xl bg-slate-800 text-slate-400 font-bold text-xs cursor-not-allowed shrink-0';
+                } else if ((appState.adexiumDailyAdsCount || 0) >= DAILY_AD_LIMIT) {
+                    adexiumBtn.textContent = 'Limit 10/10';
+                    adexiumBtn.disabled = true;
+                    adexiumBtn.className = 'px-3.5 py-2 rounded-xl bg-slate-800 text-slate-400 font-bold text-xs cursor-not-allowed shrink-0';
+                } else {
+                    adexiumBtn.textContent = 'Watch Ad';
+                    adexiumBtn.disabled = false;
+                    adexiumBtn.className = 'px-4 py-2 rounded-xl bg-gradient-to-r from-amber-400 to-emerald-400 text-slate-950 font-bold text-xs shadow-lg active:scale-95 transition shrink-0';
                 }
             }
 
