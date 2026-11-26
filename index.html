@@ -204,7 +204,7 @@
                 <div class="mt-3 pt-2.5 border-t border-white/5">
                     <div class="flex justify-between text-[11px] text-slate-400 mb-1">
                         <span>Node Tier: <strong id="league-name" class="text-sky-300">Bronze</strong></span>
-                        <span id="league-progress-text">0 / 10,000</span>
+                        <span id="league-progress-text">0 / 250</span>
                     </div>
                     <div class="w-full h-1.5 bg-slate-800/90 rounded-full overflow-hidden">
                         <div id="league-progress-bar" class="h-full bg-gradient-to-r from-emerald-400 to-sky-500 rounded-full transition-all duration-300" style="width: 0%"></div>
@@ -272,7 +272,7 @@
                 </div>
             </div>
 
-            <!-- Slot 1: ADSBitvex Sponsor Ad Boost (+5 AI, Daily Limit 10) -->
+            <!-- Slot 1: ADSBitvex Sponsor Ad Boost (+50 AI, Daily Limit 10) -->
             <div class="glass-card rounded-2xl p-3.5 border border-sky-400/25 space-y-2.5">
                 <div class="flex items-center justify-between gap-3">
                     <div class="flex items-center gap-3 min-w-0">
@@ -282,7 +282,7 @@
                         <div class="min-w-0">
                             <p class="text-xs font-bold text-white flex items-center gap-1.5">
                                 Sponsor Ad Boost 
-                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">+5 AI</span>
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">+50 AI</span>
                             </p>
                             <p class="text-[10px] text-slate-400 mt-0.5">Placement: Sponsor Slot 1 • Today: <span id="daily-ad-count-display" class="text-sky-300 font-semibold">0</span> / 10</p>
                         </div>
@@ -297,7 +297,7 @@
                 </label>
             </div>
 
-            <!-- Slot 2: Adsgram Reward Ad (Block ID: 61343, +5 AI, Daily Limit 10) -->
+            <!-- Slot 2: Adsgram Reward Ad (Block ID: 61343, +50 AI, Daily Limit 10) -->
             <div class="glass-card rounded-2xl p-3.5 border border-emerald-400/30 space-y-2.5">
                 <div class="flex items-center justify-between gap-3">
                     <div class="flex items-center gap-3 min-w-0">
@@ -307,7 +307,7 @@
                         <div class="min-w-0">
                             <p class="text-xs font-bold text-white flex items-center gap-1.5">
                                 Adsgram Reward Ad
-                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">+5 AI</span>
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">+50 AI</span>
                             </p>
                             <p class="text-[10px] text-slate-400 mt-0.5">Block #61343 • Today: <span id="adsgram-daily-count-display" class="text-emerald-300 font-semibold">0</span> / 10</p>
                         </div>
@@ -317,7 +317,7 @@
                     </button>
                 </div>
                 <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-white/5">
-                    <span>Reward per completed view: <strong class="text-emerald-300">+5 AI Tokens</strong></span>
+                    <span>Reward per completed view: <strong class="text-emerald-300">+50 AI Tokens</strong></span>
                     <span class="font-mono text-sky-300">ID: 61343</span>
                 </div>
             </div>
@@ -350,7 +350,7 @@
                 </div>
             </div>
 
-            <!-- Auto-Loading Adsgram Task Feed Card (Block ID: task-61344, +10 AI) -->
+            <!-- Auto-Loading Adsgram Task Feed Card (Block ID: task-61344, +100 AI) -->
             <div class="glass-card-glow rounded-2xl p-4 border border-amber-400/35 space-y-3">
                 <div class="flex items-center justify-between gap-2">
                     <div class="flex items-center gap-2.5 min-w-0">
@@ -360,7 +360,7 @@
                         <div class="min-w-0">
                             <h3 class="text-sm font-bold text-white truncate flex items-center gap-1.5">
                                 Adsgram Live Task Stream
-                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">+10 AI</span>
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold">+100 AI</span>
                             </h3>
                             <p id="adsgram-task-status-label" class="text-[11px] text-slate-400 truncate">Auto-loading block task-61344 • New tasks stream automatically</p>
                         </div>
@@ -444,7 +444,7 @@
                     </div>
                     <div class="text-right">
                         <span class="text-xs font-bold text-emerald-300 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-400/20 block">
-                            +10 AI
+                            +100 AI
                         </span>
                         <span id="secret-reset-timer" class="text-[9px] font-mono text-slate-400 mt-1 block">Resets in 24:00:00</span>
                     </div>
@@ -758,13 +758,14 @@
         const ADSGRAM_REWARD_BLOCK_ID = '61343';
         const ADSGRAM_INTERSTITIAL_BLOCK_ID = 'int-61318';
         const ADSGRAM_TASK_BLOCK_ID = 'task-61344';
-        const ADSGRAM_TASK_REWARD = 10;
+        const ADSGRAM_TASK_REWARD = 100;
+        const CIPHER_REWARD = 100;
 
         const AUTO_MINE_DURATION_MS = 24 * 60 * 60 * 1000;
         const AUTO_MINE_REWARD = 10;
         const MIN_WITHDRAW_USDT = 100;
         const DAILY_AD_LIMIT = 10;
-        const AD_BOOST_REWARD = 5;
+        const AD_BOOST_REWARD = 50;
         const GAME_ENTRY_FEE = 5;
         const GAME_PASS_MATCHES = 3;
 
@@ -863,7 +864,7 @@
             }, delayMs);
         }
 
-        // Adsgram Reward Ad (Block ID: 61343, +5 AI, Daily Limit 10)
+        // Adsgram Reward Ad (Block ID: 61343, +50 AI, Daily Limit 10)
         function watchAdsgramRewardAd() {
             if (!isTelegramVerified || isAccountBanned) return;
             syncDailyAdCounter();
@@ -909,11 +910,11 @@
                     isAdPlaying = false;
                     console.warn('Adsgram reward ad error/skipped:', err);
                     triggerHaptic('error');
-                    showToast('Ad Not Completed', 'Watch the full ad to receive +5 AI tokens.', 'error');
+                    showToast('Ad Not Completed', `Watch the full ad to receive +${AD_BOOST_REWARD} AI tokens.`, 'error');
                 });
         }
 
-        // Adsgram Auto-Loading Task Feed (Block ID: task-61344, +10 AI, continuous new tasks)
+        // Adsgram Auto-Loading Task Feed (Block ID: task-61344, +100 AI, continuous new tasks)
         function bindAdsgramTaskEvents(taskWidget) {
             if (!taskWidget || taskWidget.dataset.bound === 'true') return;
             taskWidget.dataset.bound = 'true';
@@ -964,7 +965,6 @@
             if (adsgramTaskAutoPollTimer) {
                 clearInterval(adsgramTaskAutoPollTimer);
             }
-            // Automatically check/refresh the task container every 35 seconds so new tasks keep appearing
             adsgramTaskAutoPollTimer = setInterval(() => {
                 if (!isTelegramVerified || isAccountBanned) return;
                 const tasksTab = document.getElementById('tab-tasks');
@@ -977,7 +977,6 @@
         async function completeAdsgramTaskReward() {
             if (!isTelegramVerified || isAccountBanned) return;
             const now = Date.now();
-            // Prevent accidental duplicate firing within 3 seconds on the same task completion
             if (now - (Number(appState.lastAdsgramTaskRewardAt) || 0) < 3000) return;
 
             appState.lastAdsgramTaskRewardAt = now;
@@ -989,7 +988,6 @@
             await saveState();
             updateAllUI();
 
-            // Load next task in the stream and show Adsgram interstitial
             setTimeout(() => {
                 refreshAdsgramTaskFeed(false);
             }, 600);
@@ -1665,7 +1663,7 @@
         let currentQuiz = { num1: 12, num2: 15, op: '+', answer: 27, options: [27, 20, 35, 24] };
 
         const TASKS_DATA = [
-            { id: 'tg_channel', title: 'AdPulse Official Channel', reward: 10, icon: 'fa-brands fa-telegram', color: 'text-sky-400', bg: 'bg-sky-500/15', url: 'https://t.me/adpulsepayoutproof' }
+            { id: 'tg_channel', title: 'AdPulse Official Channel', reward: 100, icon: 'fa-brands fa-telegram', color: 'text-sky-400', bg: 'bg-sky-500/15', url: 'https://t.me/adpulsepayoutproof' }
         ];
 
         const DAILY_REWARDS = [5, 5, 5, 5, 5, 5, 15];
@@ -2039,11 +2037,12 @@
             } catch (e) {}
         }
 
+        // Lowered rank thresholds so users rank up easily
         function getLeagueInfo(points) {
-            if (points >= 100000) return { name: 'Diamond', next: 250000, prev: 100000, iconColor: 'text-sky-400' };
-            if (points >= 35000) return { name: 'Gold', next: 100000, prev: 35000, iconColor: 'text-amber-400' };
-            if (points >= 10000) return { name: 'Silver', next: 35000, prev: 10000, iconColor: 'text-slate-300' };
-            return { name: 'Bronze', next: 10000, prev: 0, iconColor: 'text-amber-500' };
+            if (points >= 2000) return { name: 'Diamond', next: 5000, prev: 2000, iconColor: 'text-sky-400' };
+            if (points >= 750) return { name: 'Gold', next: 2000, prev: 750, iconColor: 'text-amber-400' };
+            if (points >= 250) return { name: 'Silver', next: 750, prev: 250, iconColor: 'text-slate-300' };
+            return { name: 'Bronze', next: 250, prev: 0, iconColor: 'text-amber-500' };
         }
 
         function updateAllUI() {
@@ -2175,9 +2174,9 @@
 
             if (enteredCode === todaysCode) {
                 appState.dailyCodeClaimedDate = todayStr;
-                appState.points += 10;
+                appState.points += CIPHER_REWARD;
                 triggerHaptic('success');
-                showToast('Cipher Claimed!', '+10 AI tokens added.', 'success');
+                showToast('Cipher Claimed!', `+${CIPHER_REWARD} AI tokens added.`, 'success');
                 saveState();
                 updateAllUI();
                 triggerClaimInterstitial(750);
