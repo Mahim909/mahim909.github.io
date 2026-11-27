@@ -436,7 +436,7 @@
                 </div>
             </div>
 
-            <!-- PubScale Offer Wall Card (App ID: 59159083) -->
+            <!-- PubScale Offer Wall Card (App ID: 59159083 + S2S Worker Sync) -->
             <div class="glass-card-glow rounded-2xl p-4 border border-sky-400/35 space-y-3">
                 <div class="flex items-center justify-between gap-2">
                     <div class="flex items-center gap-2.5 min-w-0">
@@ -455,7 +455,9 @@
                 </div>
                 <div class="flex items-center justify-between bg-slate-950/70 px-3 py-2 rounded-xl border border-white/5 text-[10px] text-slate-400">
                     <span>Rate: <strong class="text-emerald-300">$1 = 10,000 AI</strong></span>
-                    <span class="font-mono text-sky-300">wow.pubscale.com</span>
+                    <button type="button" onclick="syncPubscaleCallbackPoints(true)" class="font-mono text-sky-300 hover:underline">
+                        <i class="fa-solid fa-rotate-right mr-1"></i>Sync S2S Reward
+                    </button>
                 </div>
             </div>
 
@@ -812,6 +814,7 @@
         const BASE_BOT_URL = 'https://t.me/AdPulse24_bot/AdPulse/app';
         const GIGA_PROJECT_ID = '9145';
         const PUBSCALE_APP_ID = '59159083';
+        const PUBSCALE_WORKER_URL = 'https://pubscale-callback.fmd006709.workers.dev/';
 
         // Adsgram Block IDs
         const ADSGRAM_REWARD_BLOCK_ID = '61343';
@@ -1251,7 +1254,7 @@
             triggerClaimInterstitial(900);
         }
 
-        // PubScale Offerwall Helpers (App ID: 59159083)
+        // PubScale Offerwall & S2S Worker Sync Helpers (App ID: 59159083)
         function getPubscaleUniqueUserId() {
             if (tgUser && tgUser.id) return String(tgUser.id);
             return String(currentDeviceId || 'guest_node');
@@ -1260,6 +1263,34 @@
         function updatePubscaleUidLabel() {
             const label = document.getElementById('pubscale-uid-label');
             if (label) label.textContent = getPubscaleUniqueUserId();
+        }
+
+        async function syncPubscaleCallbackPoints(showFeedback = false) {
+            if (!isTelegramVerified || isAccountBanned || !tgUser.id) return;
+            const previousPoints = Number(appState.points || 0);
+            try {
+                const res = await fetch(`${FIREBASE_DB_URL}/users/${tgUser.id}.json`);
+                const remoteData = await res.json();
+                if (remoteData && typeof remoteData === 'object') {
+                    const remotePoints = Number(remoteData.points || 0);
+                    appState = { ...appState, ...remoteData, points: remotePoints };
+                    updateAllUI();
+                    if (remotePoints > previousPoints) {
+                        const diff = Math.floor(remotePoints - previousPoints);
+                        triggerHaptic('success');
+                        showToast('PubScale Reward Synced!', `+${diff} AI tokens credited via S2S callback.`, 'success');
+                    } else if (showFeedback) {
+                        showToast('PubScale Synced', 'Balance is up to date.', 'info');
+                    }
+                } else if (showFeedback) {
+                    showToast('PubScale Synced', 'No new reward found yet.', 'info');
+                }
+            } catch (err) {
+                console.warn('PubScale S2S sync error:', err);
+                if (showFeedback) {
+                    showToast('Sync Failed', 'Could not check PubScale reward right now.', 'error');
+                }
+            }
         }
 
         function openPubscaleOfferwall() {
@@ -1275,13 +1306,14 @@
             }
         }
 
-        function closePubscaleOfferwall() {
+        async function closePubscaleOfferwall() {
             triggerHaptic('light');
             const overlay = document.getElementById('pubscale-offerwall-overlay');
             const iframe = document.getElementById('pubscale-offerwall-iframe');
             if (overlay) overlay.classList.add('hidden');
             if (iframe) iframe.src = '';
-            refreshReferrals();
+            await syncPubscaleCallbackPoints(false);
+            await refreshReferrals();
         }
 
         // Giga Offer Wall SDK Loader & Reward Handler
@@ -2882,6 +2914,7 @@
 
             if (tabName === 'tasks') {
                 updatePubscaleUidLabel();
+                syncPubscaleCallbackPoints(false);
                 syncOfferWallStatus();
                 refreshAdsgramTaskFeed(false);
             }
